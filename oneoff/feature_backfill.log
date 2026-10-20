@@ -1,0 +1,33 @@
+[holder_num] 2019-03-31 rows=3307
+[holder_num] 2019-06-30 rows=3469
+[holder_num] 2019-09-30 rows=3393
+[holder_num] 2019-12-31 rows=3594
+[holder_num] 2020-03-31 rows=3499
+[holder_num] 2020-06-30 rows=3738
+[holder_num] 2020-09-30 rows=3750
+[holder_num] 2020-12-31 rows=4002
+[holder_num] 2021-03-31 rows=3957
+[holder_num] 2021-06-30 rows=4170
+[holder_num] 2021-09-30 rows=4220
+[holder_num] 2021-12-31 rows=4415
+[holder_num] 2022-03-31 rows=4398
+[holder_num] 2022-06-30 rows=4524
+[holder_num] 2022-09-30 rows=4567
+[holder_num] 2022-12-31 rows=4704
+[holder_num] 2023-03-31 rows=4701
+[holder_num] 2023-06-30 rows=4822
+[holder_num] 2023-09-30 rows=4832
+[holder_num] 2023-12-31 rows=4896
+[holder_num] 2024-03-31 rows=4883
+[holder_num] 2024-06-30 rows=4922
+[holder_num] 2024-09-30 rows=4917
+[holder_num] 2024-12-31 rows=4983
+[holder_num] 2025-03-31 rows=4966
+[holder_num] 2025-06-30 rows=5004
+[holder_num] 2025-09-30 rows=4996
+[holder_num] 2025-12-31 rows=5044
+[holder_num] 2026-03-31 rows=5030
+[holder_num] 2026-06-30 rows=5061
+{'periods': 30, 'rows': 132764}
+[comment] 2026-09-23 rows=5199
+{'trade_date': '2026-09-23', 'rows': 5199}

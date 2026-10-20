@@ -1,0 +1,4 @@
+stats: {'hits': 2, 'win_rate': 50.0, 'avg_return': 0.17, 'median_return': 0.17, 'max_return': 0.88, 'max_loss': -0.54, 'suspended_hits': 1, 'suspended_now': 1}
+300585.SZ 奥联电子 buy=15.9 now=16.04 ret=0.88% suspended=True suspended_now=True
+600519.SH 贵州茅台 buy=1258.0 now=1251.24 ret=-0.54% suspended=False suspended_now=False
+DONE

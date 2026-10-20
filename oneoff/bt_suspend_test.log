@@ -1,0 +1,5 @@
+VOLUME_BREAKOUT: hits=34 win=44.1% avg=1.37% susp_hits=0 susp_now=0
+  top10 sample keys: ['buy_date', 'buy_price', 'name', 'now_price', 'return_pct', 'suspended', 'suspended_now', 'ts_code']
+MA_BULL: hits=234 win=51.7% avg=1.72% susp_hits=0 susp_now=0
+  top10 sample keys: ['buy_date', 'buy_price', 'name', 'now_price', 'return_pct', 'suspended', 'suspended_now', 'ts_code']
+DONE

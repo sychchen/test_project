@@ -1,0 +1,102 @@
+
+===== [12:06:12] index 指数日线 =====
+--> index 指数日线: {'total': 7, 'ok': 7, 'failed_count': 0, 'rows': 280, 'failed_list': [], 'sources': {'sh000001': 'sina', 'sz399001': 'sina', 'sz399006': 'sina', 'sh000016': 'sina', 'sh000300': 'sina', 'sh000905': 'sina', 'sh000688': 'sina'}, 'tx_fallback': []}
+
+===== [12:06:15] quotes 日线 9/18-9/21 =====
+[quote] progress 200/5220 ok=199 failed=1
+[quote] progress 400/5220 ok=399 failed=1
+[quote] progress 600/5220 ok=599 failed=1
+[quote] progress 800/5220 ok=799 failed=1
+[quote] progress 1000/5220 ok=999 failed=1
+[quote] progress 1200/5220 ok=1199 failed=1
+[quote] progress 1400/5220 ok=1398 failed=2
+[quote] progress 1600/5220 ok=1598 failed=2
+[quote] progress 1800/5220 ok=1798 failed=2
+[quote] progress 2000/5220 ok=1998 failed=2
+[quote] progress 2200/5220 ok=2198 failed=2
+[quote] progress 2400/5220 ok=2398 failed=2
+[quote] progress 2600/5220 ok=2597 failed=3
+[quote] progress 2800/5220 ok=2797 failed=3
+[quote] progress 3000/5220 ok=2997 failed=3
+[quote] progress 3200/5220 ok=3197 failed=3
+[quote] progress 3400/5220 ok=3397 failed=3
+[quote] progress 3600/5220 ok=3597 failed=3
+[quote] progress 3800/5220 ok=3794 failed=6
+[quote] progress 4000/5220 ok=3993 failed=7
+[quote] progress 4200/5220 ok=4192 failed=8
+[quote] progress 4400/5220 ok=4392 failed=8
+[quote] progress 4600/5220 ok=4591 failed=9
+[quote] progress 4800/5220 ok=4791 failed=9
+[quote] progress 5000/5220 ok=4990 failed=10
+[quote] progress 5200/5220 ok=5190 failed=10
+--> quotes 日线 9/18-9/21: {'total': 5220, 'ok': 5210, 'failed_count': 10, 'rows': 10416, 'failed_list': [{'ts_code': '000016.SZ', 'reason': 'no_rows_in_range'}, {'ts_code': '002731.SZ', 'reason': 'no_rows_in_range'}, {'ts_code': '301139.SZ', 'reason': 'no_rows_in_range'}, {'ts_code': '601059.SH', 'reason': 'no_rows_in_range'}, {'ts_code': '601198.SH', 'reason': 'no_rows_in_range'}, {'ts_code': '601238.SH', 'reason': 'no_rows_in_range'}, {'ts_code': '601995.SH', 'reason': 'no_rows_in_range'}, {'ts_code': '603400.SH', 'reason': 'no_rows_in_range'}, {'ts_code': '605303.SH', 'reason': 'no_rows_in_range'}, {'ts_code': '688496.SH', 'reason': 'no_rows_in_range'}], 'mode': 'range', 'keep_days': None, 'start_date': '2026-09-18', 'end_date': '2026-09-21'}
+
+===== [12:07:04] indicators 衍生指标 =====
+[indicator] 读取 182200 行, 4.8s
+[indicator] 计算完成 26033 行, 5.4s
+[indicator] 临时表写入完成, 6.9s
+--> indicators 衍生指标: {'rows': 26033, 'mode': 'range', 'days': 5, 'coverage': {'tot': 5148584, 'cont_pct': Decimal('5013498'), 'vol_ratio': Decimal('5096779'), 'turnover_rate': Decimal('1280986')}, 'elapsed': 23.2}
+
+===== [12:07:27] ztpool 五池 =====
+[ztpool] 2026-09-21 涨停 101 / 强势 291 / 跌停 2 / 炸板 25 / 昨涨停 77
+[ztpool] 2026-09-18 涨停 77 / 强势 189 / 跌停 0 / 炸板 25 / 昨涨停 47
+[ztpool] 2026-09-17 涨停 47 / 强势 135 / 跌停 1 / 炸板 20 / 昨涨停 89
+[ztpool] 2026-09-16 涨停 89 / 强势 106 / 跌停 4 / 炸板 11 / 昨涨停 32
+[ztpool] 完成 4 日: 涨停 314 行, 强势 721 行, 跌停 7 行, 炸板 81 行, 昨涨停 245 行, 非本地池剔除 12
+--> ztpool 五池: {'dates': 4, 'zt_rows': 314, 'strong_rows': 721, 'missed': 12, 'dt_rows': 7, 'zbgc_rows': 81, 'prev_rows': 245}
+
+===== [12:07:48] margin 两融明细 =====
+[margin] 20260921 rows=3527
+[margin] 20260918 rows=3527
+[margin] 20260917 rows=3527
+[margin] 20260916 rows=3527
+[margin] 20260915 rows=3526
+[margin] 完成 5 日共 17634 行, 非本地池剔除 1
+--> margin 两融明细: {'dates': 5, 'rows': 17634, 'missed': 1}
+
+===== [12:08:02] darkpool 大宗交易 =====
+[darkpool] 大宗交易 [2026-09-08~2026-09-22] 原始 1075 行, 落表 921 行, 非本地池剔除 154
+--> darkpool 大宗交易: {'raw': 1075, 'rows': 921, 'skipped': 154, 'range': '2026-09-08~2026-09-22'}
+
+===== [12:08:04] darkpool 龙虎榜 =====
+[darkpool] 龙虎榜 [2026-09-08~2026-09-22] 原始 675 行, 落表 609 行, 非本地池剔除 66
+[darkpool] 席位聚合完成: 457 个 股+日 组合
+--> darkpool 龙虎榜: {'raw': 675, 'rows': 609, 'skipped': 66, 'seat_pairs': 457, 'range': '2026-09-08~2026-09-22'}
+
+===== [12:08:21] darkind 暗盘指标 =====
+[darkind] 重算 10 个交易日, 落表 911 行, 信号分布 {'无': 782, '减持出货': 71, '游资活跃': 57, '机构吸筹': 1}
+--> darkind 暗盘指标: {'dates': 10, 'rows': 911, 'signals': {'无': 782, '减持出货': 71, '游资活跃': 57, '机构吸筹': 1}}
+
+===== [12:08:22] hotrank 人气榜快照 =====
+[hotrank] 2026-09-21 rows=99 非本地池剔除=1
+--> hotrank 人气榜快照: {'trade_date': '2026-09-21', 'rows': 99, 'missed': 1}
+
+===== [12:08:23] adjdaily 复权因子增量 =====
+[adjdaily] 最近2个交易日无隐含昨收偏差预警, 0 候选
+--> adjdaily 复权因子增量: {'candidates': 0, 'events': 0, 'checked': 0, 'failed': 0}
+
+===== [12:08:23] boardsynth 板块日线合成 =====
+[boardsynth] 板块 49 个, 开始合成日线
+[boardsynth] 板块进度 10/49
+[boardsynth] 板块进度 20/49
+[boardsynth] 板块进度 30/49
+[boardsynth] 板块进度 40/49
+[boardsynth] 日线行数 49750, 落表...
+[boardsynth] 已清理 49 个板块旧行, 重新写入
+[boardsynth] 成分覆盖不足未出行 905 个板块-日 (门槛 max(3, 20%×成分股数))
+[boardsynth] 完成, 耗时 71.1s
+--> boardsynth 板块日线合成: {'boards': 49, 'rows': 49750}
+
+==================================================
+补数完成, 总耗时 203s
+  ✓ index
+  ✓ quotes
+  ✓ indicators
+  ✓ ztpool
+  ✓ margin
+  ✓ darkpool_block
+  ✓ darkpool_billboard
+  ✓ darkind
+  ✓ hotrank
+  ✓ adjdaily
+  ✓ boardsynth

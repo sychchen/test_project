@@ -1,0 +1,273 @@
+[run_manual] 启动每日更新, 日志: D:\kiro-worspace\test_project\stock-system\logs\daily_update_20261020_154317.log
+
+===== [15:43:25] basic 股票列表+基本面 =====
+[basic] 腾讯估值覆盖 5223/5223
+--> basic 股票列表+基本面 结果: {'synced': 5223, 'sample': [{'symbol': '600000', 'name': '浦发银行', 'pe_ttm': 6.35, 'pb': 0.43, 'total_mv': 325065000000.0, 'circ_mv': 325065000000.0, 'market': 'SH', 'ts_code': '600000.SH'}, {'symbol': '600004', 'name': '白云机场', 'pe_ttm': 17.54, 'pb': 0.97, 'total_mv': 20077000000.0, 'circ_mv': 18437000000.0, 'market': 'SH', 'ts_code': '600004.SH'}, {'symbol': '600006', 'name': '东风股份', 'pe_ttm': -22.85, 'pb': 1.31, 'total_mv': 10340000000.0, 'circ_mv': 10340000000.0, 'market': 'SH', 'ts_code': '600006.SH'}]}
+
+===== [15:44:43] quotes 日线行情 =====
+[quote] progress 200/5225 ok=200 failed=0
+[quote] progress 400/5225 ok=400 failed=0
+[quote] progress 600/5225 ok=600 failed=0
+[quote] progress 800/5225 ok=800 failed=0
+[quote] progress 1000/5225 ok=1000 failed=0
+[quote] progress 1200/5225 ok=1200 failed=0
+[quote] progress 1400/5225 ok=1400 failed=0
+[quote] progress 1600/5225 ok=1600 failed=0
+[quote] progress 1800/5225 ok=1800 failed=0
+[quote] progress 2000/5225 ok=2000 failed=0
+[quote] progress 2200/5225 ok=2199 failed=1
+[quote] progress 2400/5225 ok=2398 failed=2
+[quote] 腾讯 WAF 熔断, 冷却 600s, 后续票直接走新浪
+[quote] progress 2600/5225 ok=2598 failed=2
+[quote] progress 2800/5225 ok=2798 failed=2
+[quote] progress 3000/5225 ok=2998 failed=2
+[quote] progress 3200/5225 ok=3198 failed=2
+[quote] progress 3400/5225 ok=3398 failed=2
+[quote] progress 3600/5225 ok=3598 failed=2
+[quote] progress 3800/5225 ok=3798 failed=2
+[quote] progress 4000/5225 ok=3995 failed=5
+[quote] progress 4200/5225 ok=4192 failed=8
+[quote] progress 4400/5225 ok=4391 failed=9
+[quote] progress 4600/5225 ok=4589 failed=11
+[quote] progress 4800/5225 ok=4788 failed=12
+[quote] progress 5000/5225 ok=4985 failed=15
+[quote] progress 5200/5225 ok=5185 failed=15
+--> quotes 日线行情 结果: {'total': 5225, 'ok': 5205, 'failed_count': 20, 'rows': 10409, 'failed_list': [{'ts_code': '300416.SZ', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '300649.SZ', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600016.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600118.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600169.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600363.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600416.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600477.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600721.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600862.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '600973.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '601702.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '603000.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '603007.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '603052.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '605208.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '688216.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '688253.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '688265.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}, {'ts_code': '688818.SH', 'reason': "HTTPSConnectionPool(host='money.finance.sina.com.cn', port=443): Read timed out. (read timeout=15)"}], 'mode': 'incremental', 'keep_days': 2, 'start_date': None, 'end_date': None}
+
+===== [15:48:35] valsnap 估值快照 =====
+--> valsnap 估值快照 结果: {'trade_date': '2026-10-20', 'rows': 5196, 'turnover_rows': 5196}
+
+===== [15:48:35] indicators 衍生指标 =====
+[indicator] 读取 166694 行, 4.6s
+[indicator] 计算完成 15623 行, 5.2s
+[indicator] 临时表写入完成, 6.2s
+--> indicators 衍生指标 结果: {'rows': 15623, 'mode': 'range', 'days': 3, 'coverage': {'tot': 5221527, 'cont_pct': Decimal('5084836'), 'vol_ratio': Decimal('5169668'), 'turnover_rate': Decimal('1333084')}, 'elapsed': 18.6}
+
+===== [15:48:54] index 指数日线 =====
+--> index 指数日线 结果: {'total': 7, 'ok': 7, 'failed_count': 0, 'rows': 280, 'failed_list': [], 'sources': {'sh000001': 'sina', 'sz399001': 'sina', 'sz399006': 'sina', 'sh000016': 'sina', 'sh000300': 'sina', 'sh000905': 'sina', 'sh000688': 'sina'}, 'tx_fallback': []}
+
+===== [15:48:57] moneyflow 资金流向 =====
+--> moneyflow 资金流向 失败: ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+
+===== [15:49:04] moneyflow-sina 新浪资金流增量(东财被拦fallback) =====
+败 2  熔断 1  用时 380s
+  5025/5216  入库 5,023 行  失败 2  熔断 1  用时 382s
+  5050/5216  入库 5,048 行  失败 2  熔断 1  用时 383s
+  5075/5216  入库 5,073 行  失败 2  熔断 1  用时 384s
+  5100/5216  入库 5,098 行  失败 2  熔断 1  用时 385s
+  5125/5216  入库 5,123 行  失败 2  熔断 1  用时 387s
+  5150/5216  入库 5,148 行  失败 2  熔断 1  用时 388s
+  5175/5216  入库 5,173 行  失败 2  熔断 1  用时 389s
+  5200/5216  入库 5,198 行  失败 2  熔断 1  用时 391s
+  5216/5216  入库 5,214 行  失败 2  熔断 1  用时 391s
+{
+  "start": "2026-10-17",
+  "end": "2026-10-20",
+  "candidates": 5216,
+  "processed": 5216,
+  "ok": 5214,
+  "failed": 2,
+  "rows_written": 5214,
+  "requests_used": 5218,
+  "cooldowns": 1,
+  "elapsed_sec": 391.4,
+  "errors": [
+    "http=504 head='<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML'",
+    "http=504 head='<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML'"
+  ]
+}
+[剩余缺口] 5192 只
+
+--> moneyflow-sina 新浪资金流增量(东财被拦fallback) 失败: RuntimeError: sina backfill failed
+
+===== [15:55:41] mfhist 资金流历史回填(探测式) =====
+池 5225 只, 断点 0, 待处理 5225
+探针 000001.SZ: 121 行, 断言失败 0
+口径校验失败 2026-10-19: API=-152335888.0 库内=84410528.22
+
+--> mfhist 资金流历史回填(探测式) 失败: RuntimeError: blocked/unfinished
+
+===== [15:55:41] thsmoney 同花顺资金流 =====
+  0%|          | 0/105 [00:00<?, ?it/s]  1%|          | 1/105 [00:00<00:21,  4.88it/s]  2%|1         | 2/105 [00:00<00:18,  5.54it/s]  3%|2         | 3/105 [00:00<00:17,  5.84it/s]  4%|3         | 4/105 [00:00<00:16,  6.31it/s]  5%|4         | 5/105 [00:00<00:15,  6.49it/s]  6%|5         | 6/105 [00:00<00:15,  6.51it/s]  7%|6         | 7/105 [00:01<00:14,  6.60it/s]  8%|7         | 8/105 [00:01<00:14,  6.60it/s]  9%|8         | 9/105 [00:01<00:14,  6.73it/s] 10%|9         | 10/105 [00:01<00:14,  6.52it/s] 10%|#         | 11/105 [00:01<00:14,  6.71it/s] 11%|#1        | 12/105 [00:01<00:13,  6.67it/s] 12%|#2        | 13/105 [00:02<00:14,  6.51it/s] 13%|#3        | 14/105 [00:02<00:13,  6.51it/s] 14%|#4        | 15/105 [00:02<00:13,  6.47it/s] 15%|#5        | 16/105 [00:02<00:14,  6.29it/s] 16%|#6        | 17/105 [00:02<00:14,  6.27it/s] 17%|#7        | 18/105 [00:02<00:14,  5.85it/s] 18%|#8        | 19/105 [00:03<00:14,  5.98it/s] 19%|#9        | 20/105 [00:03<00:14,  5.78it/s] 20%|##        | 21/105 [00:03<00:13,  6.07it/s] 21%|##        | 22/105 [00:03<00:13,  5.99it/s] 22%|##1       | 23/105 [00:03<00:13,  6.06it/s] 23%|##2       | 24/105 [00:03<00:13,  5.85it/s] 24%|##3       | 25/105 [00:04<00:13,  5.84it/s] 25%|##4       | 26/105 [00:04<00:12,  6.22it/s] 26%|##5       | 27/105 [00:04<00:12,  6.34it/s] 27%|##6       | 28/105 [00:04<00:11,  6.44it/s] 28%|##7       | 29/105 [00:04<00:12,  6.07it/s] 29%|##8       | 30/105 [00:04<00:11,  6.29it/s] 30%|##9       | 31/105 [00:04<00:11,  6.34it/s] 30%|###       | 32/105 [00:05<00:11,  6.51it/s] 31%|###1      | 33/105 [00:05<00:11,  6.02it/s] 32%|###2      | 34/105 [00:05<00:11,  6.09it/s] 33%|###3      | 35/105 [00:05<00:11,  6.07it/s] 34%|###4      | 36/105 [00:05<00:11,  5.77it/s] 35%|###5      | 37/105 [00:06<00:22,  3.02it/s] 36%|###6      | 38/105 [00:06<00:18,  3.61it/s] 37%|###7      | 39/105 [00:06<00:16,  4.10it/s] 38%|###8      | 40/105 [00:06<00:14,  4.62it/s] 39%|###9      | 41/105 [00:07<00:12,  5.13it/s] 40%|####      | 42/105 [00:07<00:11,  5.59it/s] 41%|####      | 43/105 [00:07<00:11,  5.61it/s] 42%|####1     | 44/105 [00:07<00:10,  5.75it/s] 43%|####2     | 45/105 [00:07<00:09,  6.03it/s] 44%|####3     | 46/105 [00:07<00:09,  6.07it/s] 45%|####4     | 47/105 [00:08<00:09,  6.32it/s] 46%|####5     | 48/105 [00:08<00:08,  6.44it/s] 47%|####6     | 49/105 [00:08<00:08,  6.41it/s] 48%|####7     | 50/105 [00:08<00:08,  6.44it/s] 49%|####8     | 51/105 [00:08<00:08,  6.45it/s] 50%|####9     | 52/105 [00:08<00:08,  6.28it/s] 50%|#####     | 53/105 [00:09<00:08,  6.42it/s] 51%|#####1    | 54/105 [00:09<00:07,  6.38it/s] 52%|#####2    | 55/105 [00:09<00:08,  5.98it/s] 53%|#####3    | 56/105 [00:09<00:07,  6.21it/s] 54%|#####4    | 57/105 [00:09<00:08,  5.59it/s] 55%|#####5    | 58/105 [00:09<00:09,  5.07it/s] 56%|#####6    | 59/105 [00:10<00:09,  4.68it/s] 57%|#####7    | 60/105 [00:10<00:10,  4.50it/s] 58%|#####8    | 61/105 [00:10<00:10,  4.35it/s] 59%|#####9    | 62/105 [00:10<00:08,  4.79it/s] 60%|######    | 63/105 [00:11<00:07,  5.26it/s] 61%|######    | 64/105 [00:11<00:07,  5.51it/s] 62%|######1   | 65/105 [00:11<00:07,  5.58it/s] 63%|######2   | 66/105 [00:11<00:12,  3.17it/s] 64%|######3   | 67/105 [00:12<00:10,  3.77it/s] 65%|######4   | 68/105 [00:12<00:08,  4.37it/s] 66%|######5   | 69/105 [00:12<00:07,  4.78it/s] 67%|######6   | 70/105 [00:12<00:06,  5.23it/s] 68%|######7   | 71/105 [00:12<00:05,  5.69it/s] 69%|######8   | 72/105 [00:12<00:05,  5.98it/s] 70%|######9   | 73/105 [00:13<00:05,  6.13it/s] 70%|#######   | 74/105 [00:13<00:04,  6.26it/s] 71%|#######1  | 75/105 [00:13<00:04,  6.14it/s] 72%|#######2  | 76/105 [00:13<00:04,  6.16it/s] 73%|#######3  | 77/105 [00:13<00:04,  6.27it/s] 74%|#######4  | 78/105 [00:15<00:18,  1.46it/s] 75%|#######5  | 79/105 [00:15<00:13,  1.90it/s] 76%|#######6  | 80/105 [00:15<00:10,  2.33it/s] 77%|#######7  | 81/105 [00:16<00:08,  2.86it/s] 78%|#######8  | 82/105 [00:16<00:06,  3.47it/s] 79%|#######9  | 83/105 [00:16<00:05,  4.07it/s] 80%|########  | 84/105 [00:18<00:15,  1.38it/s] 81%|########  | 85/105 [00:18<00:11,  1.76it/s] 82%|########1 | 86/105 [00:18<00:08,  2.25it/s] 83%|########2 | 87/105 [00:18<00:06,  2.71it/s] 84%|########3 | 88/105 [00:18<00:05,  3.24it/s] 85%|########4 | 89/105 [00:19<00:04,  3.74it/s] 86%|########5 | 90/105 [00:20<00:08,  1.81it/s] 87%|########6 | 91/105 [00:20<00:07,  1.99it/s] 88%|########7 | 92/105 [00:20<00:05,  2.44it/s] 89%|########8 | 93/105 [00:21<00:03,  3.09it/s] 90%|######### | 95/105 [00:21<00:02,  4.84it/s] 91%|#########1| 96/105 [00:21<00:01,  5.16it/s] 93%|#########3| 98/105 [00:21<00:01,  6.30it/s] 95%|#########5| 100/105 [00:21<00:00,  7.89it/s] 96%|#########6| 101/105 [00:21<00:00,  6.98it/s] 98%|#########8| 103/105 [00:22<00:00,  8.84it/s]100%|##########| 105/105 [00:22<00:00,  9.07it/s]                                                 [thsmoney] date=2026-10-20 rows=5216 非本地池剔除=1
+--> thsmoney 同花顺资金流 结果: {'trade_date': '2026-10-20', 'rows': 5216, 'missed': 1}
+
+===== [15:56:08] minutes 个股分时 =====
+[minute] progress 500/5225 ok=500 failed=0
+[minute] progress 1000/5225 ok=1000 failed=0
+[minute] progress 1500/5225 ok=1500 failed=0
+[minute] progress 2000/5225 ok=2000 failed=0
+[minute] progress 2500/5225 ok=2500 failed=0
+[minute] progress 3000/5225 ok=3000 failed=0
+[minute] progress 3500/5225 ok=3500 failed=0
+[minute] progress 4000/5225 ok=4000 failed=0
+[minute] progress 4500/5225 ok=4500 failed=0
+[minute] progress 5000/5225 ok=5000 failed=0
+--> minutes 个股分时 结果: {'total': 5225, 'ok': 5225, 'failed_count': 0, 'rows': 752400, 'scale': 5, 'failed_list': []}
+
+===== [15:58:15] board 板块基础 =====
+[board] 新浪行业板块 49 个
+[board] 基准交易日 2026-10-20, 行情 5196 只
+[board] 成分映射进度 20/49
+[board] 成分映射进度 40/49
+[board] 成分映射刷新完成: 2566 条
+[board] 同花顺热榜在榜 100 只
+[board] 板块快照落表 49 行 (trade_date=2026-10-20)
+--> board 板块基础 结果: {'boards': 49, 'members': 2566, 'ths_hot': 100, 'trade_date': '2026-10-20'}
+
+===== [16:00:02] boardsynth 板块日线合成 =====
+[boardsynth] 板块 49 个, 开始合成日线
+[boardsynth] 板块进度 10/49
+[boardsynth] 板块进度 20/49
+[boardsynth] 板块进度 30/49
+[boardsynth] 板块进度 40/49
+[boardsynth] 日线行数 50418, 落表...
+[boardsynth] 已清理 49 个板块旧行, 重新写入
+[boardsynth] 成分覆盖不足未出行 911 个板块-日 (门槛 max(3, 20%×成分股数))
+[boardsynth] 完成, 耗时 82.0s
+--> boardsynth 板块日线合成 结果: {'boards': 49, 'rows': 50418}
+
+===== [16:01:24] boardmin 板块分时合成 =====
+[boardmin] 2026-10-20 板块分时 2352 行 (1/1 天, 8s)
+[boardmin] 完成: 1 个交易日 / 2352 行, 保留窗口 30 天, 耗时 13.9s
+--> boardmin 板块分时合成 结果: {'rows': 2352, 'days': 1, 'trade_date': '2026-10-20', 'days_done': ['2026-10-20']}
+
+===== [16:02:56] darkpool 大宗交易 =====
+[darkpool] 大宗交易 [2026-10-06~2026-10-20] 原始 734 行, 落表 582 行, 非本地池剔除 152
+--> darkpool 大宗交易 结果: {'raw': 734, 'rows': 582, 'skipped': 152, 'range': '2026-10-06~2026-10-20'}
+
+===== [16:02:58] darkpool 龙虎榜 =====
+[darkpool] 龙虎榜 [2026-10-06~2026-10-20] 原始 602 行, 落表 538 行, 非本地池剔除 64
+[darkpool] 席位聚合完成: 412 个 股+日 组合
+--> darkpool 龙虎榜 结果: {'raw': 602, 'rows': 538, 'skipped': 64, 'seat_pairs': 412, 'range': '2026-10-06~2026-10-20'}
+
+===== [16:03:14] darkind 暗盘指标 =====
+[darkind] 重算 10 个交易日, 落表 960 行, 信号分布 {'无': 856, '游资活跃': 61, '减持出货': 43}
+--> darkind 暗盘指标 结果: {'dates': 10, 'rows': 960, 'signals': {'无': 856, '游资活跃': 61, '减持出货': 43}}
+
+===== [16:03:15] ztpool 五池采集 =====
+[ztpool] 2026-10-20 涨停 52 / 强势 97 / 跌停 6 / 炸板 29 / 昨涨停 46
+[ztpool] 完成 1 日: 涨停 52 行, 强势 97 行, 跌停 6 行, 炸板 29 行, 昨涨停 46 行, 非本地池剔除 7
+--> ztpool 五池采集 结果: {'dates': 1, 'zt_rows': 52, 'strong_rows': 97, 'missed': 7, 'dt_rows': 6, 'zbgc_rows': 29, 'prev_rows': 46}
+
+===== [16:03:19] finreport 业绩报表 =====
+  0%|          | 0/1 [00:00<?, ?it/s]100%|##########| 1/1 [00:00<00:00,  5.33it/s]                                             [finreport] 2026-09-30: 111 行
+[finreport] 完成 1 个报告期, 共 111 行
+--> finreport 业绩报表 结果: {'report_dates': ['2026-09-30'], 'rows': 111}
+
+===== [16:03:20] hotrank 人气榜快照 =====
+[hotrank] 2026-10-20 rows=100 非本地池剔除=0
+--> hotrank 人气榜快照 结果: {'trade_date': '2026-10-20', 'rows': 100, 'missed': 0}
+
+===== [16:03:21] margin 两融明细 =====
+[margin] 20261020 stock_margin_detail_sse 失败: ValueError Length mismatch: Expected axis has 0 elements, new values have 13 elements
+[margin] 20261020 rows=0
+[margin] 20261019 rows=3522
+[margin] 完成 2 日共 3522 行, 非本地池剔除 0
+--> margin 两融明细 结果: {'dates': 2, 'rows': 3522, 'missed': 0}
+
+===== [16:03:28] sharechange 董监高持股变动 =====
+--> sharechange 董监高持股变动 结果: {'mode': 'since 2026-10-13', 'remote': 141, 'rows': 10}
+
+===== [16:03:29] adjdaily 复权因子增量 =====
+[adjdaily] 600380.SH 2026-10-20 除权因子跳变 1.0 -> 0.9296333 (-7.5693%)
+[adjdaily] 601598.SH 2026-10-20 除权因子跳变 1.0 -> 0.9796807 (-2.0741%)
+[adjdaily] 603207.SH 2026-10-20 除权因子跳变 1.0 -> 0.98272043 (-1.7583%)
+[adjdaily] 688016.SH 2026-10-20 除权因子跳变 1.0 -> 0.98503594 (-1.5191%)
+[adjdaily] 601898.SH 2026-10-20 除权因子跳变 1.0 -> 0.98801303 (-1.2132%)
+[adjdaily] 603699.SH 2026-10-20 除权因子跳变 1.0 -> 0.98911917 (-1.1001%)
+[adjdaily] 002812.SZ 2026-10-20 除权因子跳变 1.0 -> 0.9910366 (-0.9044%)
+[adjdaily] 301587.SZ 2026-10-20 除权因子跳变 1.0 -> 0.99139009 (-0.8685%)
+[adjdaily] 002756.SZ 2026-10-20 除权因子跳变 1.0 -> 0.9917226 (-0.8346%)
+[adjdaily] 000783.SZ 2026-10-20 除权因子跳变 1.0 -> 0.99346405 (-0.6579%)
+[adjdaily] 600906.SH 2026-10-20 除权因子跳变 1.0 -> 0.99358974 (-0.6452%)
+[adjdaily] 候选=11 验证=11 新事件=11 failed=0
+--> adjdaily 复权因子增量 结果: {'candidates': 11, 'checked': 11, 'events': 11, 'failed': 0}
+
+===== [16:03:32] suspend 停复牌快照 =====
+--> suspend 停复牌快照 结果: {'rows': 118, 'records': 31, 'range': '2026-09-30~2026-10-20'}
+
+===== [16:03:32] forecast 业绩预告 =====
+--> forecast 业绩预告 结果: {'periods': 0, 'rows': 0, 'note': '报告期均已覆盖'}
+
+===== [16:03:32] restricted 限售解禁 =====
+[restricted] 2026-07-22~2027-04-18 rows=1021
+--> restricted 限售解禁 结果: {'start': '2026-07-22', 'end': '2027-04-18', 'rows': 1021}
+
+===== [16:03:35] pledge 股权质押 =====
+--> pledge 股权质押 结果: {'trade_date': '2026-10-16', 'rows': 0, 'note': '最新快照已覆盖'}
+
+===== [16:03:35] goodwill 商誉 =====
+[goodwill] 2026-09-30 rows=0
+--> goodwill 商誉 结果: {'periods': 1, 'rows': 0}
+
+===== [16:03:36] holder_num 股东户数 =====
+[holder_num] 2026-09-30 rows=781
+--> holder_num 股东户数 结果: {'periods': 1, 'rows': 781}
+
+===== [16:03:38] comment 千股千评 =====
+[comment] 2026-10-20 rows=5199
+--> comment 千股千评 结果: {'trade_date': '2026-10-20', 'rows': 5199}
+
+===== [16:03:54] gapfill 金额/估值缺口回填 =====
+[gapfill] amount 缺口: ['2026-09-22', '2026-09-23', '2026-09-24', '2026-09-29', '2026-09-30', '2026-10-08', '2026-10-09', '2026-10-12', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-19'] | valuation 缺口: ['2026-09-22', '2026-09-28', '2026-09-29', '2026-10-08', '2026-10-14']
+[gapfill] baostock 区间 2026-09-22 ~ 2026-10-19
+[gapfill] 股票 5220, 已处理 5220, 待处理 0
+
+--> gapfill 金额/估值缺口回填 结果: {'ok': True}
+
+===== [16:04:26] valtopup 估值日度顶格 =====
+--> valtopup 估值日度顶格 结果: {'trade_date': '2026-10-20', 'rows': 5196}
+
+===== [16:04:38] valpctl 估值分位落库 =====
+--> valpctl 估值分位落库 结果: {'trade_date': '2026-10-20', 'rows': 5196, 'elapsed': 139}
+
+===== [16:06:58] cyq 筹码分布(本地衍生) =====
+[cyq] 落库 156248 行(窗口 2025-09-19~2026-10-20, 输出最近 30 日), 跳过 0 只, 耗时 139s
+--> cyq 筹码分布(本地衍生) 结果: {'rows': 156248, 'out_days': 30, 'skipped': 0, 'window_start': '2025-09-19', 'window_end': '2026-10-20'}
+
+===== [16:09:17] rank_deriv 形态榜单(本地衍生) =====
+[rank_deriv] 2026-10-20 新高86 新低243 连涨3414 连跌1660 落库 top200 ×4, 耗时 11s
+--> rank_deriv 形态榜单(本地衍生) 结果: {'trade_date': '2026-10-20', 'counts': {'NEW_HIGH_60': 86, 'NEW_LOW_60': 243, 'CONT_UP': 3414, 'CONT_DOWN': 1660}, 'rows': 686}
+
+===== [16:09:28] pick 全部策略选股 =====
+--> pick 全部策略选股 结果: {'ok': 14, 'failed': [], 'skipped': [], 'hits': {'均线多头': 190, '放量突破': 31, '低估值': 354, 'MACD金叉': 156, '缩量回调': 35, '连续阳线': 40, '一周主线低吸': 8, '涨停复盘': 0, '低估值分位': 50, '价资背离': 0, '两融趋势': 0, '业绩质量': 50, '低估+质量双因子': 30, '缠论二买': 50}}
+
+==================================================
+每日更新完成, 总耗时 1929s
+  ✓ basic
+  ✓ quotes
+  ✓ valsnap
+  ✓ indicators
+  ✓ index
+  ✗ moneyflow
+  ✗ mfhist
+  ✓ thsmoney
+  ✓ minutes
+  ✓ board
+  ✓ boardsynth
+  ✓ boardmin
+  ✓ darkpool_block
+  ✓ darkpool_billboard
+  ✓ darkind
+  ✓ ztpool
+  ✓ finreport
+  ✓ sharechange
+  ✓ adjdaily
+  ✓ suspend
+  ✓ forecast
+  ✓ restricted
+  ✓ pledge
+  ✓ goodwill
+  ✓ holder_num
+  ✓ comment
+  ✓ gapfill
+  ✓ valtopup
+  ✓ valpctl
+  ✓ cyq
+  ✓ rank_deriv
+  ✓ pick
+
+[run_manual] 结束, 用时 32.3 分钟, 退出码 1
+[run_manual] ✗ 有步骤失败(见上方 ✗ 行), 可直接重跑补齐
+
+按回车关闭窗口...

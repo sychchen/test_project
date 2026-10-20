@@ -1,0 +1,3 @@
+[adjfactor] 腾讯WAF拦截, 冷却 300s 后重试...
+[adjdaily] 候选=30 验证=0 新事件=0 failed=1
+[adjdaily] 候选=30 验证=0 事件=0 failed=1

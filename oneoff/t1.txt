@@ -1,0 +1,1 @@
+"{\"nav\":[\"板块行情\",\"暗盘信号\",\"涨停池\",\"市场面板\",\"选股结果\",\"策略选股\",\"策略回测\",\"数据采集\"],\"interMenuGone\":true,\"interSectionGone\":true,\"interSelectExists\":true,\"interFilterRows\":15,\"interFilterAllGe2\":false}"

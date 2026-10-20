@@ -1,0 +1,1 @@
+"{\"mktKline\":true,\"hotTopDefault\":\"10\",\"hotRows\":10,\"ffTopDefault\":\"5\",\"ffInLines\":5,\"hotRowsTop20\":20,\"ffInLinesTop10\":10,\"mktKlineLoaded\":true,\"mktKlineCode\":\"600487.SH\",\"eqHeights\":[430,430]}"

@@ -1,0 +1,1 @@
+"{\"boardRows\":49,\"boardDescOK\":true,\"darkSplit50\":true,\"darkCols\":14,\"darkQp\":true,\"darkRows\":95,\"darkDescOK\":true,\"darkNewCols\":true}"

@@ -1,0 +1,107 @@
+
+===== [22:56:11] moneyflow 资金流向(重试) =====
+--> moneyflow 资金流向(重试) 失败: ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+
+===== [22:56:18] hotrank 人气榜快照(重试) =====
+--> hotrank 人气榜快照(重试) 失败: ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+
+===== [22:56:20] margin 两融明细(重试) =====
+[margin] 20260923 stock_margin_detail_sse 失败: ValueError Length mismatch: Expected axis has 0 elements, new values have 13 elements
+[margin] 20260923 rows=0
+[margin] 20260922 rows=3528
+[margin] 20260921 rows=3527
+[margin] 完成 3 日共 7055 行, 非本地池剔除 0
+--> margin 两融明细(重试) 结果: {'dates': 3, 'rows': 7055, 'missed': 0}
+
+===== [22:56:28] adjdaily 复权因子增量(重试) =====
+[adjdaily] 002961.SZ 2026-09-23 除权因子跳变 1.0 -> 0.66609929 (-50.1278%)
+[adjdaily] 001225.SZ 2026-09-23 除权因子跳变 1.0 -> 0.7142773 (-40.0016%)
+[adjdaily] 300181.SZ 2026-09-23 除权因子跳变 1.0 -> 0.97416232 (-2.6523%)
+[adjdaily] 002746.SZ 2026-09-23 除权因子跳变 1.0 -> 0.97670807 (-2.3847%)
+[adjdaily] 301004.SZ 2026-09-23 除权因子跳变 1.0 -> 0.97736994 (-2.3154%)
+[adjdaily] 002345.SZ 2026-09-23 除权因子跳变 1.0 -> 0.97752809 (-2.2989%)
+[adjdaily] 002004.SZ 2026-09-23 除权因子跳变 1.0 -> 0.97782705 (-2.2676%)
+[adjdaily] 002991.SZ 2026-09-23 除权因子跳变 1.0 -> 0.98382545 (-1.644%)
+[adjdaily] 600529.SH 2026-09-23 除权因子跳变 1.0 -> 0.98395722 (-1.6304%)
+[adjdaily] 601968.SH 2026-09-23 除权因子跳变 1.0 -> 0.98672566 (-1.3453%)
+[adjdaily] 603197.SH 2026-09-23 除权因子跳变 1.0 -> 0.98710553 (-1.3063%)
+[adjdaily] 300577.SZ 2026-09-23 除权因子跳变 1.0 -> 0.98696296 (-1.3209%)
+[adjdaily] 002287.SZ 2026-09-23 除权因子跳变 1.0 -> 0.9885657 (-1.1567%)
+[adjdaily] 001368.SZ 2026-09-23 除权因子跳变 1.0 -> 0.98851894 (-1.1614%)
+[adjdaily] 603156.SH 2026-09-23 除权因子跳变 1.0 -> 0.9889795 (-1.1143%)
+[adjdaily] 300453.SZ 2026-09-23 除权因子跳变 1.0 -> 0.98902305 (-1.1099%)
+[adjdaily] 600526.SH 2026-09-23 除权因子跳变 1.0 -> 0.98799127 (-1.2155%)
+[adjdaily] 002810.SZ 2026-09-23 除权因子跳变 1.0 -> 0.99088398 (-0.92%)
+[adjdaily] 601022.SH 2026-09-23 除权因子跳变 1.0 -> 0.99176334 (-0.8305%)
+[adjdaily] 600161.SH 2026-09-23 除权因子跳变 1.0 -> 0.99197432 (-0.8091%)
+[adjdaily] 300573.SZ 2026-09-23 除权因子跳变 1.0 -> 0.9919268 (-0.8139%)
+[adjdaily] 605020.SH 2026-09-23 除权因子跳变 1.0 -> 0.99206601 (-0.7997%)
+[adjdaily] 002986.SZ 2026-09-23 除权因子跳变 1.0 -> 0.99254518 (-0.7511%)
+[adjdaily] 600143.SH 2026-09-23 除权因子跳变 1.0 -> 0.99257058 (-0.7485%)
+[adjdaily] 603897.SH 2026-09-23 除权因子跳变 1.0 -> 0.99354422 (-0.6498%)
+[adjdaily] 300016.SZ 2026-09-23 除权因子跳变 1.0 -> 0.99369748 (-0.6342%)
+[adjdaily] 600995.SH 2026-09-23 除权因子跳变 1.0 -> 0.99422442 (-0.5809%)
+[adjdaily] 600637.SH 2026-09-23 除权因子跳变 1.0 -> 0.99446903 (-0.5562%)
+[adjdaily] 601890.SH 2026-09-23 除权因子跳变 1.0 -> 0.99488753 (-0.5139%)
+[adjdaily] 候选=29 验证=29 新事件=29 failed=0
+--> adjdaily 复权因子增量(重试) 结果: {'candidates': 29, 'checked': 29, 'events': 29, 'failed': 0}
+
+===== [22:56:35] suspend 停复牌快照 =====
+--> suspend 停复牌快照 结果: {'rows': 128, 'records': 30, 'range': '2026-09-10~2026-09-23'}
+
+===== [22:56:35] forecast 业绩预告 =====
+--> forecast 业绩预告 结果: {'periods': 0, 'rows': 0, 'note': '报告期均已覆盖'}
+
+===== [22:56:35] restricted 限售解禁 =====
+[restricted] 2026-06-25~2027-03-22 rows=1082
+--> restricted 限售解禁 结果: {'start': '2026-06-25', 'end': '2027-03-22', 'rows': 1082}
+
+===== [22:56:41] pledge 股权质押 =====
+--> pledge 股权质押 结果: {'trade_date': '2026-09-18', 'rows': 0, 'note': '最新快照已覆盖'}
+
+===== [22:56:41] goodwill 商誉 =====
+--> goodwill 商誉 结果: {'periods': 0, 'rows': 0, 'note': '报告期均已覆盖'}
+
+===== [22:56:41] holder_num 股东户数 =====
+--> holder_num 股东户数 结果: {'period': '2026-06-30', 'rows': 0, 'note': '最新报告期已覆盖'}
+
+===== [22:56:42] comment 千股千评 =====
+--> comment 千股千评 结果: {'trade_date': '2026-09-23', 'rows': 0, 'note': '当日快照已覆盖'}
+
+===== [22:56:49] gapfill 金额/估值缺口回填 =====
+[gapfill] amount 缺口: ['2026-09-22'] | valuation 缺口: ['2026-09-22']
+[gapfill] baostock 区间 2026-09-22 ~ 2026-09-22
+[gapfill] 股票 5209, 已处理 5210, 待处理 2
+login success!
+logout success!
+[gapfill] 本分片: ok=2 amount+1行 valuation+1行 failed=0 用时=0s
+[gapfill] valpctl 2026-09-22: {'trade_date': '2026-09-22', 'rows': 1, 'elapsed': 157}
+
+--> gapfill 金额/估值缺口回填 结果: {'ok': True}
+
+===== [22:59:56] valtopup 估值日度顶格 =====
+--> valtopup 估值日度顶格 结果: {'trade_date': '2026-09-23', 'rows': 5209}
+
+===== [22:59:58] valpctl 估值分位落库 =====
+--> valpctl 估值分位落库 结果: {'trade_date': '2026-09-23', 'rows': 5209, 'elapsed': 154}
+
+===== [23:02:33] pick 全部策略选股 =====
+--> pick 全部策略选股 结果: {'ok': 13, 'failed': [], 'hits': {'均线多头': 667, '放量突破': 79, '低估值': 336, 'MACD金叉': 229, '缩量回调': 135, '连续阳线': 158, '一周主线低吸': 21, '涨停复盘': 0, '低估值分位': 50, '价资背离': 0, '两融趋势': 0, '业绩质量': 50, '低估+质量双因子': 30}}
+
+==================================================
+补跑结束, 总耗时 803s
+  ✗ moneyflow
+  ✗ hotrank
+  ✓ margin
+  ✓ adjdaily
+  ✓ suspend
+  ✓ forecast
+  ✓ restricted
+  ✓ pledge
+  ✓ goodwill
+  ✓ holder_num
+  ✓ comment
+  ✓ gapfill
+  ✓ valtopup
+  ✓ valpctl
+  ✓ pick

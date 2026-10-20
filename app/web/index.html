@@ -1,0 +1,2778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>选股系统 · 行情终端</title>
+<script src="/static/lib/echarts.min.js"></script>
+<style>
+  /* ===== 同花顺网页版风格: 白底 + 红色主调 + 紧凑数据密度 ===== */
+  :root {
+    --red: #e8342e; --red-dark: #c9261f; --red-bg: #fff1f0;
+    --up: #f0423c; --down: #1eb14e;
+    --bg: #f5f6f8; --card: #fff; --border: #e8eaed;
+    --text: #333; --dim: #999; --dark: #1a1a1a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: var(--bg);
+         color: var(--text); font-size: 13px; }
+  .num { font-variant-numeric: tabular-nums; font-family: Arial, "Microsoft YaHei", sans-serif; }
+
+  /* ---- 顶部导航 ---- */
+  .topbar { background: #fff; border-bottom: 2px solid var(--red); display: flex;
+            align-items: center; padding: 0 20px; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 18px; font-weight: bold; color: var(--red); margin-right: 28px;
+          display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .logo .sub-logo { font-size: 11px; color: var(--dim); font-weight: normal; }
+  .nav { display: flex; height: 100%; flex: 1; }
+  .nav a { display: flex; align-items: center; padding: 0 18px; cursor: pointer; color: #555;
+           font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+  .nav a:hover { color: var(--red); }
+  .nav a.active { color: var(--red); font-weight: bold; border-bottom-color: var(--red); }
+  .top-right { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+  .dot.ok { background: var(--down); } .dot.bad { background: var(--up); }
+
+  /* ---- 页面容器 ---- */
+  /* 页面宽度: 所有页面按屏幕宽度自适应, 占屏 85% */
+  .main { width: 85%; max-width: none; margin: 0 auto; padding: 16px 20px 48px; }
+  .page { display: none; }
+  .page.active { display: block; animation: fade .15s ease-in; }
+  @keyframes fade { from { opacity: .4; } to { opacity: 1; } }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+           margin-bottom: 14px; }
+  .panel-head { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex;
+                align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 14px; font-weight: bold; padding-left: 10px; border-left: 3px solid var(--red); }
+  .panel-body { padding: 14px 16px; }
+  .panel-tip { font-size: 12px; color: var(--dim); font-weight: normal; }
+
+  /* ---- 按钮/输入 ---- */
+  button { background: #fff; color: #444; border: 1px solid #d9d9d9; border-radius: 3px;
+           padding: 6px 14px; cursor: pointer; font-size: 13px; margin-right: 8px; transition: all .12s; }
+  button:hover { color: var(--red); border-color: var(--red); }
+  button:disabled { color: #bbb; border-color: #e5e5e5; cursor: wait; }
+  button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  button.primary:hover { background: var(--red-dark); border-color: var(--red-dark); }
+  button.small { padding: 3px 10px; font-size: 12px; }
+  select, input { padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 3px;
+                  margin-right: 8px; font-size: 13px; background: #fff; }
+  select:focus, input:focus { outline: none; border-color: var(--red); }
+
+  /* ---- 数据表格(紧凑行情风) ---- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid #f0f1f3; white-space: nowrap; }
+  th { background: #fafbfc; color: #888; font-weight: normal; text-align: left;
+       position: sticky; top: 52px; z-index: 10; }
+  td.r, th.r { text-align: right; }
+  /* ---- 表头自定义排序: 点击在 升序 -> 降序 -> 原序 间切换 ---- */
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--red); }
+  th .sort-ar { display: inline-block; margin-left: 3px; font-size: 10px; color: #c9ccd1; }
+  /* 容器内滚动的表格：表头吸顶必须归零。全局 th 的 top:52px 是给"整页滚动 + 顶部导航吸顶"用的，
+     放进内部滚动容器会让表头下移 52px 压住首行数据。 */
+  .scroll-tbl th { top: 0; }
+  th.sorted { color: var(--red); }
+  th.sorted .sort-ar { color: var(--red); }
+  tbody tr:hover { background: var(--red-bg); }
+  tr.pickrow { cursor: pointer; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .code { color: #888; font-size: 12px; }
+  .reason { color: #888; font-size: 12px; white-space: normal; min-width: 260px; }
+
+  /* ---- 选股结果: 左右分栏(34% : 66%, 左栏需容纳 代码/名称/策略/基准日/连涨天数/连涨涨幅) ---- */
+  /* 结果页：整体高度锁定在视口内，长列表与图表各自在面板内部消化，
+     避免整页出现上下滚动条（#16-1）。 */
+  .result-split { display: flex; gap: 14px; align-items: stretch; height: calc(100vh - 126px); }
+  .result-split .split-left { flex: 0 0 34%; min-width: 0; margin-bottom: 0; }
+  .result-split .split-right { flex: 1 1 66%; min-width: 0; margin-bottom: 0; }
+  .result-split > .panel { display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
+  .result-split > .panel > .panel-head { flex: 0 0 auto; }
+  .result-split > .panel > .panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto;
+                                         display: flex; flex-direction: column; }
+  /* 左侧：筛选区固定，表格区内部滚动 */
+  .result-split .tbl-scroll { flex: 1 1 auto; min-height: 90px; overflow-y: auto; overflow-x: hidden; }
+  /* 表格在内部滚动容器里，表头吸顶改为容器顶部(全局默认是 top:52px 给整页滚动用的) */
+  .result-split .tbl-scroll th { top: 0; }
+  /* 右侧：图表区吃满剩余高度，K线高度按实测可用高度自适应 */
+  .result-split [data-r="chartWrap"] { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  /* 右栏非图表元素固定高度，不参与收缩，避免把图表挤小 */
+  .result-split > .panel > .panel-body > .search-wrap,
+  .result-split > .panel > .panel-body > .quote-band,
+  .result-split > .panel > .panel-body > .chart-tabs,
+  .result-split > .panel > .panel-body > .cfg-panel,
+  .result-split > .panel > .panel-body > [data-r="hint"] { flex: 0 0 auto; }
+  /* 报价带内容多(11 项指标 + 概念标签)时会换行成很高的一块，把下方 K 线挤扁。
+     修复(2026-09-23): 138px 会把第二行指标+标签裁掉(带内滚动, 视觉上"内容被遮挡")。
+     → 压缩 qb-cell 内边距/宽度让 11 项两行排下, 上限放宽到 180px, K线自适应高度仍有
+       300px 下限保护(klineHeight 计算), 不会被挤扁。 */
+  .result-split .quote-band { max-height: 180px; overflow-y: auto; margin: 10px 0; }
+  .result-split .qb-cell { padding: 6px 12px; min-width: 84px; }
+  .result-split .qb-main { padding: 8px 14px; min-width: 170px; }
+  .result-split .qb-tags { flex: 1 1 100%; max-height: 48px; overflow-y: auto; align-content: flex-start; }
+  /* 左栏仅 30% 宽度, 表格紧凑化以容纳更多指标列(固定列宽防溢出) */
+  .result-split .split-left table { font-size: 11px; table-layout: fixed; }
+  .result-split .split-left th, .result-split .split-left td {
+    padding: 5px 4px; line-height: 1.3; }
+  .result-split .split-left th { font-size: 10px; white-space: normal; }
+  /* 排序箭头在窄栏里占位明显，缩小以免把表头挤成两行 */
+  .result-split .split-left th .sort-ar { font-size: 9px; margin-left: 2px; }
+  /* 50:50 分栏变体(暗盘信号/涨停池, 2026-10-19 Epic#9/#10) */
+  .result-split.split-50 .split-left { flex: 0 0 50%; }
+  .result-split.split-50 .split-right { flex: 1 1 50%; }
+  /* 列宽随内容/列名自适应 + 横向滚动(table-layout:auto 覆盖左栏 fixed) */
+  .result-split .tbl-scroll.scroll-x { overflow-x: auto; }
+  .result-split table.tbl-auto { table-layout: auto; width: max-content; min-width: 100%; }
+  .result-split table.tbl-auto th, .result-split table.tbl-auto td { white-space: nowrap; }
+  /* 板块详情右栏内容比选股页多(信息卡/解读/图/成分表)，未在白名单里的块会被 flex 压扁
+     —— 实测 K 线被挤成 19px。这里统一禁止收缩，内容超高时由容器滚动。 */
+  #boardDetailBody > * { flex: 0 0 auto; }
+  #boardDetailBody > #boardChart { flex: 0 0 300px; height: 300px; }
+  #boardDetailBody .quote-band { margin: 0 0 4px; max-height: none; }
+  .result-split .split-left td { overflow: hidden; }
+  .result-split .split-left td.ell { white-space: nowrap; text-overflow: ellipsis; }
+  .result-split .split-left td.dt { font-size: 10px; color: #777; }
+  /* 代码单元格内有绝对定位的悬浮卡(tip-anchor), 不能对 td 做 overflow:hidden, 改夹内层 span */
+  .result-split .split-left span.ell { display: inline-block; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+  /* 行悬浮详情卡: 默认表格只列 代码/名称/命中策略/基准日, 悬停行显示全部基础信息 */
+  .pickrow td.tip-anchor { position: relative; }
+  .row-tip { display: none; position: absolute; left: 0; top: 100%; z-index: 60; background: #fff;
+             border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.14);
+             padding: 10px 12px; min-width: 300px; max-width: 440px; white-space: normal;
+             font-size: 12px; color: #555; cursor: default; }
+  tr.pickrow:hover .row-tip { display: block; }
+  .row-tip .tip-title { font-weight: bold; color: #333; margin-bottom: 6px; font-size: 13px; }
+  .row-tip .tip-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin-bottom: 6px; }
+  .row-tip .tip-grid .k { color: #999; }
+  .row-tip .tip-reason { color: #888; border-top: 1px dashed #eee; padding-top: 6px; line-height: 1.5; }
+
+  /* ---- 标签 ---- */
+  .stag { display: inline-block; border-radius: 2px; padding: 1px 6px; font-size: 12px; margin: 0 4px 2px 0; }
+  .tag-ind { background: #eaf3fb; color: #2980b9; }
+  .tag-con { background: var(--red-bg); color: var(--red); }
+  .tag-idx { background: #eafaf1; color: #1eb14e; }
+  .badge { display: inline-block; background: #f0f1f3; color: #888; border-radius: 2px;
+           padding: 1px 6px; font-size: 11px; margin-left: 6px; }
+  /* 报价带「所属板块」可点击链接：点击跳板块行情页并自动定位 */
+  .board-link { color: #2980b9; cursor: pointer; text-decoration: none; font-size: 13px; }
+  .board-link:hover { color: var(--red); text-decoration: underline; }
+  /* 板块成分股行内跳转按钮：默认隐藏，鼠标悬停行时浮现 */
+  .mgoto { visibility: hidden; padding: 2px 8px; font-size: 11px; margin-right: 0; }
+  tr:hover .mgoto { visibility: visible; }
+
+  /* ---- 行情页: 报价带 ---- */
+  .search-wrap { position: relative; }
+  .search-wrap input { width: 380px; height: 34px; padding: 0 12px; font-size: 14px; }
+  .suggest { position: absolute; top: 36px; left: 0; width: 420px; background: #fff;
+             border: 1px solid var(--border); z-index: 99; display: none;
+             max-height: 300px; overflow-y: auto; box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+  .suggest div { padding: 8px 12px; cursor: pointer; }
+  .suggest div:hover { background: var(--red-bg); }
+  .suggest .dim { color: var(--dim); font-size: 12px; margin-left: 8px; }
+
+  .quote-band { display: flex; align-items: stretch; gap: 0; margin: 14px 0; border: 1px solid var(--border);
+                border-radius: 4px; overflow: hidden; background: #fff; flex-wrap: wrap; }
+  .qb-main { padding: 12px 20px; border-right: 1px solid var(--border); min-width: 200px; }
+  .qb-name { font-size: 16px; font-weight: bold; }
+  .qb-price { font-size: 30px; font-weight: bold; line-height: 1.2; }
+  .qb-chg { font-size: 14px; font-weight: bold; }
+  .qb-cell { padding: 10px 18px; border-right: 1px solid #f0f1f3; display: flex;
+             flex-direction: column; justify-content: center; min-width: 96px; }
+  .qb-cell .k { font-size: 11px; color: var(--dim); margin-bottom: 3px; }
+  .qb-cell .v { font-size: 14px; }
+  .qb-tags { flex: 1; padding: 10px 16px; display: flex; flex-wrap: wrap; align-content: center; }
+
+  .chart-tabs { margin: 0 0 8px; }
+  .chart-tabs button { border-radius: 3px 3px 0 0; border-bottom: none; margin-right: 2px; }
+  .chart-tabs button.active { background: var(--red); color: #fff; border-color: var(--red); }
+  .sub-ctl { margin: 0 0 8px; font-size: 12px; }
+  .sub-ctl select { padding: 3px 6px; font-size: 12px; margin-right: 6px; }
+  /* 副图控件悬浮条: 定位于主图与副图之间的间隙 */
+  .sub-ctl-float { position: absolute; left: 12px; z-index: 6; margin: 0;
+    background: rgba(255,255,255,0.94); border: 1px solid var(--border);
+    border-radius: 3px; padding: 2px 8px; white-space: nowrap; }
+  .chart { width: 100%; display: block; }
+  /* 详情设置面板 */
+  .cfg-panel { margin: 0 0 8px; padding: 8px 12px; background: #fafbfc;
+    border: 1px solid var(--border); border-radius: 3px; font-size: 12px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .cfg-panel .cfg-k { color: #888; }
+  .cfg-panel label { cursor: pointer; color: #444; }
+  .cfg-panel select { padding: 3px 6px; font-size: 12px; margin-right: 0; }
+
+  /* ---- 策略卡片 ---- */
+  .strat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 1100px) { .market-grid { grid-template-columns: 1fr; } }
+  /* 市场面板: 人气榜/资金流对比 等高 + 底部K线面板尺寸(2026-10-19 Epic#11) */
+  .mkt-eq .panel-body { height: 430px; display: flex; flex-direction: column; }
+  .mkt-eq .tbl-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .mkt-kline { grid-column: 1 / -1; }
+  .mkt-kline .panel-body { display: flex; flex-direction: column; height: 620px; }
+  .mkt-kline [data-r="chartWrap"] { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .top-sel { font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+  .top-sel label { margin-left: 8px; cursor: pointer; color: #444; }
+  .ff-item { cursor: pointer; }
+  .ff-item:hover { text-decoration: underline; }
+  .strat { border: 1px solid var(--border); border-radius: 4px; padding: 14px 16px; background: #fff;
+           transition: box-shadow .15s; }
+  .strat:hover { box-shadow: 0 4px 14px rgba(232,52,46,.12); border-color: #f5b5b2; }
+  .strat .name { font-size: 15px; font-weight: bold; }
+  .strat .code-tag { font-size: 11px; color: var(--dim); margin-left: 8px; }
+  .strat .params { font-size: 11px; color: var(--dim); margin: 8px 0 12px; word-break: break-all;
+                   max-height: 48px; overflow-y: auto; background: #fafbfc; padding: 6px 8px;
+                   border-radius: 3px; line-height: 1.6; }
+
+  /* ---- 回测统计 ---- */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
+  .stat-cell { background: #fff; border: 1px solid var(--border); border-top: 3px solid var(--red);
+               border-radius: 3px; padding: 12px 8px; text-align: center; }
+  .stat-cell .v { font-size: 22px; font-weight: bold; }
+  .stat-cell .k { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+  /* ---- 采集控制台 ---- */
+  .console { background: var(--dark); color: #b8e6b8; font-family: Consolas, monospace;
+             font-size: 12px; border-radius: 4px; padding: 12px 16px; height: 300px;
+             overflow-y: auto; line-height: 1.9; }
+  .console .t { color: #666; margin-right: 8px; }
+  .console .err { color: #ff7a75; }
+  .console .okm { color: #6fd98a; }
+
+  /* ---- K线展开行 ---- */
+  .kline-box { padding: 12px; background: #fafbfc; }
+
+  /* ---- 底部状态栏 ---- */
+  .statusbar { position: fixed; bottom: 0; left: 0; right: 0; height: 30px; background: var(--dark);
+               color: #ccc; font-size: 12px; display: flex; align-items: center; padding: 0 20px;
+               justify-content: space-between; z-index: 100; }
+  .statusbar .msg { color: #ffd666; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">选股系统<span class="sub-logo">真实行情 · 新浪数据源</span></div>
+  <nav class="nav">
+    <a data-page="board" onclick="switchPage('board', this)">板块行情</a>
+    <a data-page="dark" onclick="switchPage('dark', this)">暗盘信号</a>
+    <a data-page="zt" onclick="switchPage('zt', this)">涨停池</a>
+    <a data-page="market" onclick="switchPage('market', this)">市场面板</a>
+    <a class="active" data-page="result" onclick="switchPage('result', this)">选股结果</a>
+    <a data-page="pick" onclick="switchPage('pick', this)">策略选股</a>
+    <a data-page="backtest" onclick="switchPage('backtest', this)">策略回测</a>
+    <a data-page="collect" onclick="switchPage('collect', this)">数据采集</a>
+  </nav>
+  <div class="top-right">
+    <span><span class="dot" id="dbDot"></span><span id="dbStatus">数据库检测中</span></span>
+    <span class="num" id="clock"></span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ========== 策略选股 ========== -->
+  <section class="page" id="page-pick">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">策略矩阵</span>
+        <span class="panel-tip">点击「执行选股」后自动跳转选股结果 ｜ 每日盘后 15:30 调度器自动执行</span>
+      </div>
+      <div class="panel-body">
+        <div class="strat-grid" id="stratList">加载中...</div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-weight:bold;margin-bottom:8px">执行日志
+            <span style="font-size:12px;color:var(--dim);font-weight:normal">选股为全市场重放（约 10~120 秒，冷启动更久），执行过程实时展示于此，请勿重复点击</span>
+          </div>
+          <div class="console" id="pickLog" style="max-height:220px;overflow-y:auto">
+            <div><span class="t">[系统]</span>执行日志就绪，点击「执行选股」后过程将输出到这里</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 选股结果（左右分栏 30% : 70%） ========== -->
+  <section class="page active" id="page-result">
+    <div class="result-split">
+    <div class="panel split-left">
+      <div class="panel-head">
+        <span class="panel-title">选股结果</span>
+        <span class="panel-tip">悬停行看详情 ｜ 点击行看K线</span>
+      </div>
+      <div class="panel-body">
+        <div style="margin-bottom:10px">
+          <select id="strategySelect" onchange="loadResults()" style="min-width:140px"><option value="">全部策略</option></select>
+          <select id="dateSelect" onchange="this.dataset.touched='1';loadResults()" style="min-width:120px"><option value="">全部日期</option></select>
+          <select id="idxSelect" onchange="filterResults()" style="min-width:110px"><option value="">全部指数</option></select>
+          <select id="interSelect" onchange="filterResults()" style="min-width:104px" title="同一股票同一基准日被N个及以上策略命中">
+            <option value="">多策略交集</option>
+            <option value="2">≥2策略</option>
+            <option value="3">≥3策略</option>
+            <option value="4">≥4策略</option>
+          </select>
+          <input id="kwInput" placeholder="按代码/名称筛选" oninput="filterResults()" style="width:110px">
+          <button class="small" onclick="loadBatches()">刷新批次</button>
+        </div>
+        <div id="batchInfo" style="font-size:12px;color:var(--dim);margin-bottom:8px"></div>
+        <div id="fallbackInfo" style="font-size:12px;color:#c0392b;margin-bottom:8px;display:none"></div>
+        <div class="tbl-scroll">
+        <table id="resultTable">
+          <colgroup><col style="width:22%"><col style="width:17%"><col style="width:18%">
+            <col style="width:12%"><col style="width:15%"><col style="width:16%"></colgroup>
+          <thead><tr>
+            <th class="sortable" data-sort="ts_code">代码<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="name">名称<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="strategies">命中策略<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="trade_date">基准日<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="cont_days">连涨天数<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="cont_pct">连涨涨幅<span class="sort-ar">⇅</span></th>
+          </tr></thead>
+          <tbody id="resultBody"><tr><td colspan="6" style="color:var(--dim)">加载中...</td></tr></tbody>
+        </table>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)">
+          <span>每页</span>
+          <select id="pageSizeSel" onchange="onPageSize(this.value)">
+            <option value="10">10</option>
+            <option value="15" selected>15</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          <span>只</span>
+          <button class="small" onclick="gotoResultPage(curPage - 1)">上一页</button>
+          <span id="pagerInfo">-</span>
+          <button class="small" onclick="gotoResultPage(curPage + 1)">下一页</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 行情K线（自原「行情K线」页整体迁移，由通用行情面板 QP 渲染） ========== -->
+    <div class="panel split-right" id="quotePanel">
+      <div class="panel-head">
+        <span class="panel-title">行情K线</span>
+        <span class="panel-tip">搜索或点击左侧结果行查看</span>
+      </div>
+      <div class="panel-body" id="qpBody-result"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ========== 策略回测 ========== -->
+  <section class="page" id="page-backtest">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">策略回测</span>
+        <span class="panel-tip">历史基准日模拟选股 → 持有至今 与 纪律化退出(-3%止损/+5%保本/T+3强平) 双口径对照｜估值按基准日真TTM快照(Baostock回填+腾讯前滚)｜日线深度自2026-07-28起，死叉窗口按纪律不开仓(空池为正确行为)</span>
+      </div>
+      <div class="panel-body">
+        <select id="btStrategy" style="min-width:220px"></select>
+        <select id="btDays"><option value="5">回看5个交易日</option><option value="10">回看10个交易日</option><option value="15">回看15个交易日</option></select>
+        <button class="primary small" onclick="runBacktest()">执行回测</button>
+        <div id="btInfo" style="font-size:12px;color:var(--dim);margin:10px 0"></div>
+        <div class="stat-grid" id="btStats"></div>
+        <div id="btDisc" style="display:none">
+          <div style="font-size:12px;color:var(--dim);margin:12px 0 6px" id="btDiscTip"></div>
+          <div class="stat-grid" id="btDiscStats"></div>
+        </div>
+        <table id="btTable" style="display:none">
+          <thead><tr><th>#</th><th>代码</th><th>名称</th><th>买入日</th><th class="r">买入价</th><th class="r">最新价</th><th class="r">持有至今</th><th class="r">纪律收益</th><th>纪律退出</th></tr></thead>
+          <tbody id="btBody"></tbody>
+        </table>
+        <div style="margin-top:18px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-weight:bold;margin-bottom:8px">指定日期选股
+            <span style="font-size:12px;color:var(--dim);font-weight:normal">按所选交易日截断行情重放策略（不落库）；日线/财报类指标精确 as-of，估值分位/两融/资金流类取表内最新数据（近似）</span>
+          </div>
+          <select id="asofStrategy" style="min-width:220px"></select>
+          <select id="asofDate" style="min-width:130px"></select>
+          <button class="primary small" onclick="runAsofPick()">执行选股</button>
+          <button class="small" onclick="runLivePick()" title="腾讯实时快照->内存临时bar->直跑策略，不落库">盘中实时选股</button>
+          <div id="asofInfo" style="font-size:12px;color:var(--dim);margin:10px 0">首次执行需加载 400 自然日行情，约 1~2 分钟</div>
+          <table id="asofTable" style="display:none">
+            <thead><tr><th>#</th><th>代码</th><th>名称</th><th class="r">收盘</th><th class="r">涨跌幅</th><th class="r">得分</th><th>命中原因</th></tr></thead>
+            <tbody id="asofBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 板块行情（新浪行业板块, 需求#19, v1.5） ========== -->
+  <section class="page" id="page-board">
+    <div class="result-split">
+    <div class="panel split-left">
+      <div class="panel-head">
+        <span class="panel-title">板块行情</span>
+        <span class="panel-tip">新浪行业口径 ｜ 点击行看板块详情</span>
+      </div>
+      <div class="panel-body">
+        <div style="margin-bottom:10px">
+          <input id="boardKwInput" placeholder="按板块名称筛选" oninput="filterBoards()" style="width:140px">
+          <button class="small" onclick="loadBoards()">刷新</button>
+        </div>
+        <div id="boardInfo" style="font-size:12px;color:var(--dim);margin-bottom:8px"></div>
+        <div class="tbl-scroll">
+        <table id="boardTable">
+          <colgroup><col style="width:26%"><col style="width:16%"><col style="width:16%">
+            <col style="width:22%"><col style="width:20%"></colgroup>
+          <thead><tr>
+            <th class="sortable" data-sort="board_name">板块<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="pct_chg">涨跌幅<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="member_cnt">成分股<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="circ_mv">流通市值<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="hot_rank">人气<span class="sort-ar">⇅</span></th>
+          </tr></thead>
+          <tbody id="boardBody"><tr><td colspan="5" style="color:var(--dim)">加载中...</td></tr></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel split-right">
+      <div class="panel-head">
+        <span class="panel-title">板块详情</span>
+        <span class="panel-tip" id="boardDetailTip">点击左侧板块查看</span>
+      </div>
+      <div class="panel-body" id="boardDetailBody" style="overflow-y:auto">
+        <div style="color:var(--dim);padding:40px 0;text-align:center">← 点击左侧板块查看基础信息 / 概念解读 / 成分股 / 板块K线</div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ========== 暗盘信号（A股盘后暗线: 大宗交易+龙虎榜, 需求#20, v1.5；2026-10-19 改 50:50 分栏+K线联动, Epic#9） ========== -->
+  <section class="page" id="page-dark">
+    <div class="result-split split-50">
+    <div class="panel split-left">
+      <div class="panel-head">
+        <span class="panel-title">暗盘信号</span>
+        <span class="panel-tip">盘后披露的主力暗线：大宗交易折溢价 + 龙虎榜席位 ｜ 点击行右侧看K线 ｜ 口径见 docs/06 B6</span>
+      </div>
+      <div class="panel-body">
+        <div style="margin-bottom:10px">
+          <select id="darkSigSel" onchange="loadDarkSignals()">
+            <option value="">全部信号</option>
+            <option value="机构吸筹">机构吸筹</option>
+            <option value="减持出货">减持出货</option>
+            <option value="游资活跃">游资活跃</option>
+            <option value="无">无信号</option>
+          </select>
+          <select id="darkDateSel" onchange="loadDarkSignals()" title="盘后披露口径，可回看任意有数据的交易日">
+            <option value="">最新交易日</option>
+          </select>
+          <input id="darkKwInput" placeholder="按代码/名称筛选" oninput="filterDarkRows()" style="width:130px">
+          <button class="small" onclick="loadDarkSignals()">刷新</button>
+        </div>
+        <div id="darkInfo" style="font-size:12px;color:var(--dim);margin-bottom:8px"></div>
+        <div class="scroll-tbl tbl-scroll scroll-x" style="max-height:calc(100vh - 260px);overflow-y:auto">
+        <table id="darkTable" class="tbl-auto">
+          <thead><tr>
+            <th class="sortable" data-sort="ts_code">代码<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="name">名称<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="signal_tag">信号<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="dark_score">dark_score<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="block_amt">大宗成交额<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="block_discount">折溢价率%<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="block_days5">近5日大宗<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="bb_net_amt5">龙虎榜净买(5日)<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="close">收盘价<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="pct_chg">涨跌幅<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="strategies">命中策略<span class="sort-ar">⇅</span></th>
+            <th class="sortable" data-sort="trade_date">基准日<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="cont_days">连涨天数<span class="sort-ar">⇅</span></th>
+            <th class="sortable r" data-sort="cont_pct">连涨涨幅<span class="sort-ar">⇅</span></th>
+          </tr></thead>
+          <tbody id="darkBody"><tr><td colspan="14" style="color:var(--dim)">加载中...</td></tr></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧 50%: 行情K线(通用行情面板 QP, 随左侧选中行联动) -->
+    <div class="panel split-right">
+      <div class="panel-head">
+        <span class="panel-title">行情K线</span>
+        <span class="panel-tip">搜索或点击左侧结果行查看</span>
+      </div>
+      <div class="panel-body" id="qpBody-dark"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ========== 涨停池（东财涨停/强势股池, v1.6；2026-10-19 改 50:50 分栏+K线联动, Epic#10） ========== -->
+  <section class="page" id="page-zt">
+    <div class="result-split split-50">
+    <div class="panel split-left">
+      <div class="panel-head">
+        <span class="panel-title">涨停池</span>
+        <span class="panel-tip">东财涨停池+强势股池 ｜ 连板梯队分布支持 ECharts / Plotly 双引擎切换 ｜ 点击行右侧看K线</span>
+      </div>
+      <div class="panel-body">
+        <div style="margin-bottom:10px">
+          <select id="ztDateSel" onchange="loadZtPool()" title="涨停池交易日，可回看任意有数据的交易日">
+            <option value="">最新交易日</option>
+          </select>
+          <select id="ztMinBoards" onchange="loadZtPool()" title="按连板数过滤">
+            <option value="1">全部涨停</option>
+            <option value="first">首板</option>
+            <option value="2">≥2 连板</option>
+            <option value="3">≥3 连板</option>
+            <option value="4">≥4 连板</option>
+            <option value="5">≥5 连板</option>
+          </select>
+          <input id="ztKwInput" placeholder="按代码/名称/行业筛选" oninput="filterZtRows()" style="width:150px">
+          <button class="small" onclick="loadZtPool()">刷新</button>
+          <span style="float:right;font-size:12px;color:var(--dim)">
+            图表引擎
+            <select id="ztEngine" onchange="switchChartEngine(this.value)" style="margin-left:4px">
+              <option value="echarts">ECharts</option>
+              <option value="plotly">Plotly</option>
+            </select>
+          </span>
+        </div>
+        <div id="ztInfo" style="font-size:12px;color:var(--dim);margin-bottom:8px"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="flex:1;min-width:260px">
+            <div style="font-size:12px;color:var(--dim);margin-bottom:4px">连板梯队分布</div>
+            <div id="ztLadderChart" class="chart" style="height:170px"></div>
+          </div>
+          <div style="flex:1;min-width:260px">
+            <div style="font-size:12px;color:var(--dim);margin-bottom:4px">行业分布 Top10
+              <select id="ztIndSrc" onchange="renderZtCharts()" title="行业聚合口径：东财涨停池自带行业 / 申万一级行业(stock_sw_industry_member)"
+                      style="padding:2px 4px;font-size:11px;margin-left:6px">
+                <option value="em">东财口径</option>
+                <option value="sw">申万口径</option>
+              </select>
+            </div>
+            <div id="ztIndustryChart" class="chart" style="height:170px"></div>
+          </div>
+        </div>
+        <div class="scroll-tbl tbl-scroll scroll-x" style="flex:1 1 auto;min-height:160px;overflow-y:auto">
+        <table id="ztTable" class="tbl-auto">
+          <thead><tr>
+            <th>代码</th><th>名称</th><th class="r">连板</th><th>涨停统计</th>
+            <th>首次封板</th><th class="r">开板次数</th><th class="r">封单额</th>
+            <th class="r">换手率%</th><th>行业</th><th class="r">涨跌幅</th>
+          </tr></thead>
+          <tbody id="ztBody"><tr><td colspan="10" style="color:var(--dim)">加载中...</td></tr></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧 50%: 行情K线(通用行情面板 QP, 随左侧选中行联动) -->
+    <div class="panel split-right">
+      <div class="panel-head">
+        <span class="panel-title">行情K线</span>
+        <span class="panel-tip">搜索或点击左侧结果行查看</span>
+      </div>
+      <div class="panel-body" id="qpBody-zt"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ========== 市场面板（二期: 两融情绪/估值温度/人气榜/资金流对比） ========== -->
+  <section class="page" id="page-market">
+    <div class="market-grid">
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">两融情绪</span>
+          <span class="panel-tip">全市场融资余额(亿元)与日变动 ｜ 交易所 T+1 发布</span>
+        </div>
+        <div class="panel-body">
+          <div id="margChart" class="chart" style="height:300px">加载中...</div>
+          <div id="margInfo" style="font-size:12px;color:var(--dim);margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">估值温度</span>
+          <span class="panel-tip">全市场 PB/PE-TTM 历史分位均值(0-1) ｜ 越低越接近历史底部</span>
+        </div>
+        <div class="panel-body">
+          <div id="valChart" class="chart" style="height:300px">加载中...</div>
+          <div id="valInfo" style="font-size:12px;color:var(--dim);margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="panel mkt-eq">
+        <div class="panel-head">
+          <span class="panel-title">人气榜</span>
+          <span class="panel-tip">东财个股人气榜 ｜ 「在榜天数」= 近10日上榜次数(连续上榜=关注度高) ｜ 点击行看底部K线</span>
+        </div>
+        <div class="panel-body">
+          <div class="top-sel">TOP:
+            <label><input type="radio" name="hotTop" value="10" checked onchange="loadHotRankPanel()">10</label>
+            <label><input type="radio" name="hotTop" value="15" onchange="loadHotRankPanel()">15</label>
+            <label><input type="radio" name="hotTop" value="20" onchange="loadHotRankPanel()">20</label>
+          </div>
+          <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>排名</th><th>代码</th><th>名称</th>
+              <th class="r">现价</th><th class="r">涨跌幅</th><th class="r">在榜天数</th>
+            </tr></thead>
+            <tbody id="hotBody"><tr><td colspan="6" style="color:var(--dim)">加载中...</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mkt-eq">
+        <div class="panel-head">
+          <span class="panel-title">资金流对比</span>
+          <span class="panel-tip">近20日全市场主力净流入(亿元) + 最新日净流入/流出 TopN ｜ 点击股票看底部K线</span>
+        </div>
+        <div class="panel-body">
+          <div id="ffChart" class="chart" style="height:190px">加载中...</div>
+          <div class="top-sel" style="margin-top:6px">TOP:
+            <label><input type="radio" name="ffTop" value="5" checked onchange="loadFundFlowPanel()">5</label>
+            <label><input type="radio" name="ffTop" value="10" onchange="loadFundFlowPanel()">10</label>
+            <label><input type="radio" name="ffTop" value="15" onchange="loadFundFlowPanel()">15</label>
+            <label><input type="radio" name="ffTop" value="20" onchange="loadFundFlowPanel()">20</label>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;flex:1 1 auto;min-height:0;overflow-y:auto">
+            <div style="flex:1;min-width:220px">
+              <div style="font-size:12px;color:var(--dim);margin-bottom:4px">净流入</div>
+              <div id="ffInList" style="font-size:12px;line-height:1.8">加载中...</div>
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div style="font-size:12px;color:var(--dim);margin-bottom:4px">净流出</div>
+              <div id="ffOutList" style="font-size:12px;line-height:1.8">加载中...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 行情K线(页底通栏, 随人气榜/资金流对比选中股票联动, Epic#11) -->
+      <div class="panel mkt-kline">
+        <div class="panel-head">
+          <span class="panel-title">行情K线</span>
+          <span class="panel-tip">搜索或点击上方「人气榜/资金流对比」中的股票查看</span>
+        </div>
+        <div class="panel-body" id="qpBody-market"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== 数据采集 ========== -->
+  <section class="page" id="page-collect">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">数据采集</span>
+        <span class="panel-tip">test_project @ 172.16.3.16:30306</span>
+      </div>
+      <div class="panel-body">
+        <div style="margin-bottom:12px">
+          <button onclick="collectBasic()">同步股票列表+基本面</button>
+          <button onclick="collectListDate()">补缺上市日期</button>
+          <button onclick="collectTags()">刷新板块标签</button>
+          <button onclick="collectEmConcepts()" title="东财概念板块（PCB/CPO等热点概念），合并入概念列">采集东财概念</button>
+          <button onclick="collectQuotes()" title="增量口径：只采最近 2 个交易日(相对窗口)">增量采集日线（最近2日）</button>
+          <button onclick="collectValSnap()" title="仅作用于最新交易日：把当前 PE/PB/总市值/流通市值 拷进当日日线行">估值快照入日线</button>
+          <button onclick="collectIndex()" title="写 stock_index_daily（7 个主流指数），与个股日线时间段无关">采集指数日线</button>
+          <button onclick="collectMoneyFlow()" title="东财当日快照，写 stock_money_flow，只覆盖最新交易日一行">采集资金流向</button>
+          <button onclick="collectMinutes()" title="写 stock_minute_quote，只覆盖最近 1 个交易日的 5 分钟线">采集当日分时(5分钟)</button>
+          <span style="display:inline-block;margin:0 10px 6px 0;padding-left:10px;border-left:1px solid var(--border)">
+            <button onclick="collectBoard()" title="新浪行业板块: 快照+成分映射+人气, 写 stock_board_basic/stock_board_member">板块基础采集</button>
+            <button onclick="collectBoardSynth()" title="成分股流通市值加权合成板块指数, 全量覆盖, 含龙头/高相关标签">板块日线合成</button>
+            <button onclick="collectBoardMin()" title="成分股分时合成, 保留近30个交易日">板块分时合成</button>
+          </span>
+          <span style="display:inline-block;margin:0 10px 6px 0;padding-left:10px;border-left:1px solid var(--border)">
+            <button onclick="collectDarkpool()" title="东财报表接口: 大宗交易+龙虎榜+席位(机构/拉萨游资), 默认回看7天">暗盘采集</button>
+            <button onclick="collectDarkInd()" title="按 B6 口径重算 dark_score 与信号标签">暗盘指标重算</button>
+          </span>
+          <span style="display:inline-block;margin:0 10px 6px 0;padding-left:10px;border-left:1px solid var(--border)">
+            <button class="primary" onclick="collectRange()" title="绝对日期区间：写 stock_daily_quote 同一张表，区间含最近交易日时会与该行的增量采集结果重合(同源同口径、不冲突)">采集指定时间段</button>
+            <input id="rangeStart" placeholder="起 2026-08-01" style="width:110px">
+            <input id="rangeEnd" placeholder="止 2026-08-31" style="width:110px">
+          </span>
+        </div>
+        <div style="font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.7">
+          <b>按日期取数的三种口径</b>：① <b>增量采集日线</b> = 相对窗口「最近 N 个交易日」（默认 2 日）；② <b>采集指定时间段</b> = 绝对区间「起~止」。
+          两者写的是<b>同一张表 stock_daily_quote、同一批列、同源同口径</b>（腾讯 fqkline 不复权 + 新浪兜底），因此<b>区间包含最近交易日时会更新同一批行，属正常覆盖、不会冲突</b>；
+          差异只在取数窗口，且区间模式<b>不会清掉 pe/pb/市值/换手率</b>（这些列由「估值快照入日线」维护）。<br>
+          ③ <b>估值快照 / 采集资金流向 / 采集当日分时</b> = 固定作用于<b>最新交易日或当日</b>，与时间段仅在「最新一天」重叠，且分别写<b>日线的估值列</b>、<b>stock_money_flow</b>、<b>stock_minute_quote</b>（后两者是独立的表）。<br>
+          其余按钮（股票列表+基本面、上市日期、板块标签、东财概念、指数日线）<b>不含日期维度或写别的表</b>，与「指定时间段」无交叉。
+        </div>
+        <div class="console" id="console"><div><span class="t">[系统]</span>采集控制台就绪，操作日志将输出到这里</div></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="statusbar">
+  <span>数据采集 → 策略选股 → 回测验证 → 结果回看</span>
+  <span class="msg" id="statusMsg">就绪</span>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (v, d=2) => v === null || v === undefined ? '-' : Number(v).toFixed(d);
+/* 逗号分隔字符串 → 标签组（超出 max 折叠为 +N，悬浮显示全部） */
+const tagList = (s, cls, max=5) => {
+  if (!s) return '<span style="color:#ccc">-</span>';
+  const arr = s.split(/[,,]/).map(t => t.trim()).filter(Boolean);
+  if (!arr.length) return '<span style="color:#ccc">-</span>';
+  const shown = arr.slice(0, max).map(t => `<span class="stag ${cls}">${t}</span>`).join('');
+  const more = arr.length > max
+    ? `<span class="stag" style="background:#f0f1f3;color:#999">+${arr.length - max}</span>` : '';
+  return `<span title="${arr.join('，')}" style="cursor:default">${shown}${more}</span>`;
+};
+let allResults = [];
+let indexTagList = [];            // /api/index_tags 结果（全部可选指数成分）
+/* 默认排序键：基准日 desc → 连涨天数 desc（表头点满三态回到的「原序」） */
+const DEFAULT_SORT_KEYS = ['trade_date', 'cont_days'];
+const resultSort = { key: null, dir: 0, defaultKeys: DEFAULT_SORT_KEYS };   // 选股结果表排序状态(key=null 表示默认排序)
+
+/* ---- 页面切换 ---- */
+function switchPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  $('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  if (name === 'result') loadBatches();
+  if (name === 'zt') loadZtPool();   // 涨停池页懒加载（含双引擎图表）
+  if (name === 'market' && !marketLoaded) loadMarket();   // 市场面板懒加载
+  /* 隐藏状态下容器宽度为 0，页面重新可见后需按真实尺寸重排图表 */
+  setTimeout(() => {
+    Object.values(QP).forEach(st => {
+      if (st.inst && st.root.offsetParent) { st.inst.resize(); fixBarGap(st.inst, st.barN); }
+    });
+  }, 30);
+}
+function gotoPage(name) {
+  switchPage(name, document.querySelector(`.nav a[data-page="${name}"]`));
+}
+
+/* ---- 市场面板: 两融情绪 / 估值温度 / 人气榜 / 资金流对比 ---- */
+async function loadMarket() {
+  marketLoaded = true;
+  // 四个端点并行拉取, 各自独立渲染(一个失败不影响其它面板)
+  loadMarginPanel();
+  loadValuationPanel();
+  loadHotRankPanel();
+  loadFundFlowPanel();
+}
+
+async function loadMarginPanel() {
+  const el = $('margChart');
+  try {
+    const r = await fetch('/api/panel/margin?days=60');
+    const j = await r.json();
+    const s = j.series || [];
+    if (!s.length) { el.innerText = '暂无两融数据'; return; }
+    const ch = getChart(el);
+    ch.setOption({
+      tooltip: { trigger: 'axis', confine: true },
+      legend: { data: ['融资余额', '当日变动'], top: 0 },
+      grid: { left: 60, right: 60, top: 30, bottom: 24 },
+      xAxis: { type: 'category', data: s.map(x => x.trade_date.slice(5)) },
+      yAxis: [
+        { type: 'value', name: '余额(亿)', scale: true },
+        { type: 'value', name: '变动(亿)', scale: true },
+      ],
+      series: [
+        { name: '融资余额', type: 'line', data: s.map(x => x.rzye_yi),
+          showSymbol: false, lineStyle: { width: 2, color: '#c0392b' } },
+        { name: '当日变动', type: 'bar', yAxisIndex: 1,
+          data: s.map(x => x.rzye_chg_yi),
+          itemStyle: { color: p => p.value >= 0 ? '#e74c3c' : '#27ae60' } },
+      ],
+    });
+    const last = s[s.length - 1];
+    $('margInfo').innerText =
+      `${last.trade_date} 融资余额 ${last.rzye_yi} 亿, 当日 ${last.rzye_chg_yi >= 0 ? '+' : ''}${last.rzye_chg_yi} 亿 (${last.stocks} 只标的)`;
+  } catch (e) { el.innerText = '加载失败: ' + e; }
+}
+
+async function loadValuationPanel() {
+  const el = $('valChart');
+  try {
+    const r = await fetch('/api/panel/valuation?days=120');
+    const j = await r.json();
+    const s = j.series || [];
+    if (!s.length) { el.innerText = '暂无估值分位数据(需先跑 valpctl)'; return; }
+    const ch = getChart(el);
+    ch.setOption({
+      tooltip: { trigger: 'axis', confine: true, valueFormatter: v => (v * 100).toFixed(1) + '%' },
+      legend: { data: ['PB 分位均值', 'PE-TTM 分位均值'], top: 0 },
+      grid: { left: 60, right: 20, top: 30, bottom: 24 },
+      xAxis: { type: 'category', data: s.map(x => x.trade_date.slice(5)) },
+      yAxis: { type: 'value', name: '分位', min: 0, max: 1,
+               axisLabel: { formatter: v => (v * 100) + '%' } },
+      /* 注意: ECharts 已知 bug (apache/echarts#13447) — 折线系列 + piecewise visualMap
+         的 pieces 若为单边区间(gt/lte/min/max 单独用), 会因 ±Infinity 区间使 visualMeta.stops
+         为空, 在 getVisualGradient 中触发 "Cannot read properties of undefined (reading 'coord')"。
+         必须用双侧闭区间(gte+lte / gt+lte)保证 stops 非空。 */
+      visualMap: { show: false, dimension: 1, seriesIndex: 0,
+        pieces: [{ gte: 0, lte: 0.5, color: '#2980b9' }, { gt: 0.5, lte: 1, color: '#e67e22' }] },
+      series: [
+        { name: 'PB 分位均值', type: 'line', data: s.map(x => x.pb_pctl),
+          showSymbol: false, lineStyle: { width: 2 } },
+        { name: 'PE-TTM 分位均值', type: 'line', data: s.map(x => x.pe_pctl),
+          showSymbol: false, lineStyle: { width: 1.5, type: 'dashed', color: '#8e44ad' } },
+      ],
+    });
+    const last = s[s.length - 1];
+    $('valInfo').innerText =
+      `${last.trade_date} PB分位均值 ${(last.pb_pctl * 100).toFixed(1)}%, PE分位均值 ${(last.pe_pctl * 100).toFixed(1)}% (${last.stocks} 只) ｜ <50% 偏便宜(蓝), >50% 偏贵(橙)`;
+  } catch (e) { el.innerText = '加载失败: ' + e; }
+}
+
+async function loadHotRankPanel() {
+  const tb = $('hotBody');
+  const top = +(document.querySelector('input[name="hotTop"]:checked')?.value || 10);
+  try {
+    const r = await fetch(`/api/panel/hotrank?days=10&top=${top}`);
+    const j = await r.json();
+    if (!j.items || !j.items.length) {
+      tb.innerHTML = '<tr><td colspan="6" style="color:var(--dim)">暂无人气榜数据(需先跑 hotrank)</td></tr>';
+      return;
+    }
+    tb.innerHTML = j.items.map(x => `
+      <tr style="cursor:pointer" onclick="QP.pick('market','${x.ts_code}')">
+        <td class="num">${x.rank_num}</td>
+        <td class="num">${x.ts_code}</td>
+        <td>${x.name || ''}</td>
+        <td class="num r">${x.price ?? '-'}</td>
+        <td class="num r" style="color:${x.pct_chg >= 0 ? 'var(--up)' : 'var(--down)'}">${x.pct_chg != null ? x.pct_chg.toFixed(2) + '%' : '-'}</td>
+        <td class="num r">${x.days_onboard}</td>
+      </tr>`).join('');
+  } catch (e) { tb.innerHTML = `<tr><td colspan="6">加载失败: ${e}</td></tr>`; }
+}
+
+async function loadFundFlowPanel() {
+  const el = $('ffChart');
+  const top = +(document.querySelector('input[name="ffTop"]:checked')?.value || 5);
+  try {
+    const r = await fetch(`/api/panel/fundflow?days=20&top=${top}`);
+    const j = await r.json();
+    const d = j.daily || [];
+    if (!d.length) { el.innerText = '暂无资金流数据(需先跑 moneyflow)'; return; }
+    const ch = getChart(el);
+    ch.setOption({
+      tooltip: { trigger: 'axis', confine: true },
+      grid: { left: 60, right: 20, top: 16, bottom: 24 },
+      xAxis: { type: 'category', data: d.map(x => x.trade_date.slice(5)) },
+      yAxis: { type: 'value', name: '亿' },
+      series: [{ name: '主力净流入', type: 'bar',
+        data: d.map(x => x.total_net_yi),
+        itemStyle: { color: p => p.value >= 0 ? '#e74c3c' : '#27ae60' } }],
+    });
+    const fmt = x => `<span class="ff-item" onclick="QP.pick('market','${x.ts_code}')">${x.name || x.ts_code} <span class="num" style="color:${x.main_net_yi >= 0 ? 'var(--up)' : 'var(--down)'}">${x.main_net_yi >= 0 ? '+' : ''}${x.main_net_yi} 亿</span></span>`;
+    $('ffInList').innerHTML = (j.top_in || []).map(fmt).join('<br>') || '-';
+    $('ffOutList').innerHTML = (j.top_out || []).map(fmt).join('<br>') || '-';
+  } catch (e) { el.innerText = '加载失败: ' + e; }
+}
+
+/* ---- 状态栏 + 控制台日志 ---- */
+function setStatus(msg) { $('statusMsg').innerText = msg; }
+function log(msg, cls='') {
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const div = document.createElement('div');
+  div.innerHTML = `<span class="t">[${t}]</span><span class="${cls}">${msg}</span>`;
+  $('console').appendChild(div);
+  $('console').scrollTop = $('console').scrollHeight;
+  setStatus(msg.replace(/<[^>]+>/g, ''));
+}
+
+/* ---- 时钟 + 健康检查 ---- */
+setInterval(() => { $('clock').innerText = new Date().toLocaleString('zh-CN', { hour12: false }); }, 1000);
+async function checkHealth() {
+  try {
+    const j = await api('/api/health');
+    const ok = j.db_connected;
+    $('dbDot').className = 'dot ' + (ok ? 'ok' : 'bad');
+    $('dbStatus').innerText = ok ? `数据库已连接 ｜ ${j.strategies}个策略` : '数据库断开';
+  } catch (e) {
+    $('dbDot').className = 'dot bad';
+    $('dbStatus').innerText = '服务异常';
+  }
+}
+
+async function api(path, method='GET', body=null) {
+  const opt = { method, headers: {'Content-Type': 'application/json'} };
+  if (body) opt.body = JSON.stringify(body);
+  const r = await fetch(path, opt);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.detail || JSON.stringify(j));
+  return j;
+}
+
+/* ---- 数据采集 ---- */
+async function collectBasic() {
+  log('正在同步股票列表+基本面快照...');
+  try {
+    const j = await api('/api/collect/basic', 'POST');
+    log(`✅ 同步完成，共 ${j.synced} 只股票`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectQuotes(limit) {
+  const url = '/api/collect/quotes' + (limit ? `?limit=${limit}` : '');
+  log(limit ? `正在试采前 ${limit} 只行情...` : '正在全市场采集行情，约需2分钟...');
+  try {
+    const j = await api(url, 'POST');
+    log(`✅ 行情采集完成: 成功 ${j.ok}/${j.total}, 入库 ${j.rows} 行, 失败 ${j.failed_count}`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectTags() {
+  log('正在刷新行业/概念/指数标签（约2-4分钟）...');
+  try {
+    const j = await api('/api/collect/tags', 'POST');
+    log(`✅ 标签刷新完成: ${j.industry_covered}/${j.total} 只有行业, 指数: ${j.index_found.join('、')}`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectEmConcepts() {
+  log('正在采集东财概念板块（约500个板块，约5-8分钟）...');
+  try {
+    const j = await api('/api/collect/emconcepts', 'POST');
+    log(`✅ 东财概念采集完成: ${j.boards} 个板块, ${j.em_stocks} 只有东财概念, 覆盖 ${j.concept_covered}/${j.total} 只`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectRange() {
+  const sd = $('rangeStart').value.trim(), ed = $('rangeEnd').value.trim();
+  if (!sd) { log('请输入起始日期，如 2026-08-01', 'err'); return; }
+  log(`正在采集 ${sd} ~ ${ed || sd} 区间日线...`);
+  try {
+    const j = await api(`/api/collect/quotes?start_date=${sd}&end_date=${ed || sd}`, 'POST');
+    log(`✅ 区间采集完成: 成功 ${j.ok}/${j.total}, 入库 ${j.rows} 行`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectMinutes() {
+  log('正在采集当日分时(5分钟)行情，约2分钟...');
+  try {
+    const j = await api('/api/collect/minutes', 'POST');
+    log(`✅ 分时采集完成: 成功 ${j.ok}/${j.total}, 入库 ${j.rows} 行`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectListDate() {
+  log('正在补缺上市日期（仅处理缺失股票）...');
+  try {
+    const j = await api('/api/collect/listdate', 'POST');
+    log(`✅ 上市日期补缺完成: 待补 ${j.pending}, 成功 ${j.ok}, 失败 ${j.failed_count}`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectValSnap() {
+  log('正在把估值快照(PE/PB/市值)写入当日日线行（须先采集日线）...');
+  try {
+    const j = await api('/api/collect/valsnap', 'POST');
+    log(`✅ 估值快照完成: 交易日 ${j.trade_date}, 写入 ${j.rows} 行`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectIndex() {
+  log('正在采集 7 个主流指数日线...');
+  try {
+    const j = await api('/api/collect/index', 'POST');
+    log(`✅ 指数采集完成: 成功 ${j.ok}/${j.total}, 入库 ${j.rows} 行`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectMoneyFlow() {
+  log('正在采集全市场资金流向快照（东财延时数据）...');
+  try {
+    const j = await api('/api/collect/moneyflow', 'POST');
+    log(`✅ 资金流向采集完成: 交易日 ${j.trade_date}, 入库 ${j.rows} 行`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+
+/* ---- 策略选股 ---- */
+async function loadStrategies() {
+  const j = await api('/api/strategies');
+  $('stratList').innerHTML = j.strategies.map(s => `
+    <div class="strat">
+      <div class="name">${s.name}<span class="code-tag">${s.code}</span></div>
+      <div class="params">${JSON.stringify(s.default_params)}</div>
+      <button class="primary small" onclick="runPick('${s.code}')">执行选股</button>
+      <button class="small" onclick="quickBacktest('${s.code}')">回测</button>
+    </div>`).join('');
+  $('btStrategy').innerHTML = j.strategies.map(s =>
+    `<option value="${s.code}">${s.name} (${s.code})</option>`).join('');
+  $('asofStrategy').innerHTML = $('btStrategy').innerHTML;
+  loadAsofDates();
+}
+
+/* ---- 指定日期选股(回测页, 不落库) ---- */
+async function loadAsofDates() {
+  try {
+    const j = await api('/api/pick/tradedates?limit=400');
+    $('asofDate').innerHTML = j.dates.map(d => `<option value="${d}">${d}</option>`).join('');
+  } catch (e) { $('asofInfo').innerText = '交易日列表加载失败: ' + e.message; }
+}
+function renderPickItems(items) {
+  $('asofTable').style.display = '';
+  $('asofBody').innerHTML = items.map((x, i) => `
+    <tr class="pickrow" onclick="QP.pick('result','${x.ts_code}')">
+      <td>${i + 1}</td>
+      <td class="code">${x.ts_code}</td>
+      <td><b>${escH(x.name)}</b></td>
+      <td class="r num">${x.close_price ?? '-'}</td>
+      <td class="r num ${x.pct_chg >= 0 ? 'up' : 'down'}">${x.pct_chg != null ? x.pct_chg.toFixed(2) + '%' : '-'}</td>
+      <td class="r num">${x.score ?? '-'}</td>
+      <td class="ell" title="${escH(x.hit_reason || '')}">${escH(x.hit_reason || '')}</td>
+    </tr>`).join('');
+}
+async function runAsofPick() {
+  const code = $('asofStrategy').value, d = $('asofDate').value;
+  if (!d) { $('asofInfo').innerText = '交易日列表未加载完成'; return; }
+  $('asofInfo').innerText = '选股执行中（加载 400 自然日行情并重放策略）...';
+  $('asofTable').style.display = 'none';
+  try {
+    const j = await api(`/api/pick/asof/${code}`, 'POST', {date: d});
+    $('asofInfo').innerText = `${j.strategy_name} @ ${j.trade_date}：命中 ${j.items.length} 只` +
+      (j.note ? ` ｜ ${j.note}` : '');
+    renderPickItems(j.items);
+  } catch (e) { $('asofInfo').innerText = '❌ ' + e.message; }
+}
+/* ---- 盘中实时选股(不落库): 实时快照->内存临时bar->直跑策略 ---- */
+async function runLivePick() {
+  const code = $('asofStrategy').value;
+  $('asofInfo').innerText = '盘中选股执行中（拉取全市场实时快照约 30~60 秒，随后内存重放策略，不落库）...';
+  $('asofTable').style.display = 'none';
+  try {
+    const j = await api(`/api/pick/live/${code}`, 'POST', {});
+    const t = j.snapshot_time || '';
+    $('asofInfo').innerText = `⚡ ${j.strategy_name} @ 快照 ${j.trade_date} ${t.slice(8,10)}:${t.slice(10,12)}：命中 ${j.items.length} 只（实时覆盖 ${j.quote_cnt} 只，不落库）` +
+      (j.note ? ` ｜ ${j.note}` : '');
+    renderPickItems(j.items);
+  } catch (e) { $('asofInfo').innerText = '❌ ' + e.message; }
+}
+
+/* 执行日志(策略选股页): 时间戳 + 分级着色, 与调度页 console 同样式 */
+function pickLog(msg, cls='') {
+  const box = $('pickLog');
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const div = document.createElement('div');
+  div.innerHTML = `<span class="t">[${t}]</span><span class="${cls}">${msg}</span>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  setStatus(msg.replace(/<[^>]+>/g, ''));
+}
+
+async function runPick(code) {
+  /* 并发保护: 上一次选股未返回时忽略重复点击(全市场重放 30~120s, 重复提交只会更慢) */
+  if (runPick._busy) {
+    pickLog(`⚠ ${code} 正在执行中，请等待当前批次完成`, 'err');
+    return;
+  }
+  runPick._busy = true;
+  /* 禁用全部「执行选股」按钮, 给出即时视觉反馈 */
+  const btns = [...document.querySelectorAll('#stratList button')].filter(b => b.textContent === '执行选股');
+  btns.forEach(b => { b.disabled = true; b.textContent = '执行中...'; });
+  pickLog(`▶ 开始执行 <b>${code}</b> 选股：加载全市场行情/指标并重放策略（约 10~120 秒，请勿重复点击）`);
+  const t0 = Date.now();
+  const timer = setInterval(() => pickLog(`⏳ ${code} 执行中... 已耗时 ${((Date.now() - t0) / 1000).toFixed(0)}s（后端正在重放，无进度流，属正常）`), 10000);
+  setStatus(`正在执行 ${code} 选股...`);
+  try {
+    const j = await api(`/api/pick/${code}`, 'POST', {});
+    clearInterval(timer);
+    pickLog(`✅ ${code} 完成，批次 <b>${j.batch_no}</b>，命中 <b>${j.hit_count}</b> 只，耗时 ${((Date.now() - t0) / 1000).toFixed(0)}s，正在跳转选股结果...`, 'okm');
+    gotoPage('result');
+    await loadBatches();
+    const nb = allBatches.find(b => b.batch_no === j.batch_no);
+    setStatus(`✅ ${j.strategy} 执行完成，批次 ${j.batch_no}，命中 ${j.hit_count} 只`
+      + (nb && nb.message ? ` — ${nb.message}` : ''));
+    if (nb) {
+      $('strategySelect').value = nb.strategy_code;
+      $('dateSelect').value = String(nb.trade_date || '');
+    }
+    loadResults();
+  } catch (e) {
+    clearInterval(timer);
+    pickLog(`❌ ${code} 失败：${escH(e.message)}（耗时 ${((Date.now() - t0) / 1000).toFixed(0)}s）`, 'err');
+    setStatus('❌ ' + e.message);
+  } finally {
+    runPick._busy = false;
+    btns.forEach(b => { b.disabled = false; b.textContent = '执行选股'; });
+  }
+}
+
+/* ---- 选股结果：策略/日期/关键词 三条件互不级联，任意组合(含全不选)均可查询；结果分页 ---- */
+let allBatches = [];  // /api/pick/batches 全量缓存（接口按 id DESC，最新在前）
+let curPage = 1, pageSize = 15, lastFiltered = [];
+const fmtTd = td => {
+  const s = String(td || '');
+  return /^\d{8}$/.test(s) ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}` : (s || '-');
+};
+/* 取该策略最近批次的结论/原因(stock_pick_batch.message)。
+   0 命中时用于展示「防御性不开仓」等原因，避免被误判成策略坏了。
+   td 为空时取该策略最新批次(接口按 id DESC，最新在前)。 */
+function batchNote(sc, td) {
+  if (!sc) return '';
+  const cands = allBatches.filter(b => b.strategy_code === sc);
+  if (!cands.length) return '';
+  const b = td ? cands.find(x => String(x.trade_date || '') === td) : cands[0];
+  return (b && b.message) ? b.message : '';
+}
+async function loadBatches() {
+  const j = await api('/api/pick/batches?limit=200');
+  allBatches = j.batches;
+  // 策略下拉：去重，value=strategy_code，显示 strategy_name
+  const seen = {};
+  allBatches.forEach(b => { if (!(b.strategy_code in seen)) seen[b.strategy_code] = b.strategy_name || b.strategy_code; });
+  $('strategySelect').innerHTML = '<option value="">全部策略</option>' +
+    Object.entries(seen).map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+  // 日期下拉：全部基准日去重倒序，不与策略级联
+  const dates = [...new Set(allBatches.map(b => String(b.trade_date || '')))].filter(Boolean).sort().reverse();
+  const dsel = $('dateSelect');
+  const prevD = dsel.value, dTouched = dsel.dataset.touched === '1';
+  dsel.innerHTML = '<option value="">全部日期</option>' +
+    dates.map(d => `<option value="${d}">${fmtTd(d)}</option>`).join('');
+  /* 默认选中最新一天；用户手动选过(含「全部日期」)且选项仍有效时保留其选择 */
+  if (dTouched && (prevD === '' || dates.includes(prevD))) dsel.value = prevD;
+  else if (dates.length) dsel.value = dates[0];
+  loadResults();
+}
+async function loadResults() {
+  const sc = $('strategySelect').value, td = $('dateSelect').value;
+  const qs = [];
+  if (sc && td) {
+    // 策略+日期双选：在 stock_pick_batch 中定位对应 batch_no（同日多次执行取最新批次）再按批次查
+    const hit = allBatches.find(b => b.strategy_code === sc && String(b.trade_date || '') === td);
+    if (hit) qs.push(`batch_no=${encodeURIComponent(hit.batch_no)}`);
+    else qs.push(`strategy_code=${encodeURIComponent(sc)}`, `trade_date=${encodeURIComponent(td)}`);
+  } else {
+    if (sc) qs.push(`strategy_code=${encodeURIComponent(sc)}`);
+    if (td) qs.push(`trade_date=${encodeURIComponent(td)}`);
+  }
+  qs.push('limit=1000');
+  const j = await api(`/api/pick/results?${qs.join('&')}`);
+  allResults = j.results;
+  const scName = sc ? $('strategySelect').selectedOptions[0].text : '';
+  // 批次说明(stock_pick_batch.message): 如「大盘弱势不开新仓」——
+  // 让 0 命中一眼看出是防御性不开仓还是策略被筛空(旧版只在 0 命中时展示)。
+  const note = sc ? batchNote(sc, td) : '';
+  $('batchInfo').innerText = `${[scName, td ? fmtTd(td) : ''].filter(Boolean).join(' ｜ ') || '全部批次'}，共 ${j.count} 条`
+    + (note ? `　·　批次说明：${note}` : '');
+  curPage = 1;
+  setFallbackInfo('');
+  renderResults(filterKw(allResults));
+}
+/* ================= 表格自定义排序 + 指数成分筛选(两页共用) =================
+   排序: 点击表头在 升序(▲) -> 降序(▼) -> 原序(⇅) 三态间循环;
+   指数成分: 按 stock_basic.index_tags(逗号分隔) 精确匹配单项成分股 */
+function sortRows(list, key, dir) {
+  if (!key || !dir) return list;
+  const isNum = list.some(r => {
+    const v = r[key];
+    return v !== null && v !== undefined && v !== '' && !isNaN(Number(v));
+  });
+  const arr = list.slice();
+  arr.sort((a, b) => {
+    if (isNum) {
+      const x = (a[key] === null || a[key] === undefined || a[key] === '') ? null : Number(a[key]);
+      const y = (b[key] === null || b[key] === undefined || b[key] === '') ? null : Number(b[key]);
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;                 // 空值恒排末尾
+      if (y === null) return -1;
+      return (x - y) * dir;
+    }
+    return String(a[key] ?? '').localeCompare(String(b[key] ?? ''), 'zh') * dir;
+  });
+  return arr;
+}
+/* 默认排序（多键、全降序）：基准日 desc → 连涨天数 desc。
+   表头点满三态回到「原序」时，即为这套默认排序。空值恒末尾。 */
+function defaultSortRows(list, keys) {
+  if (!keys || !keys.length) return list;
+  const arr = list.slice();
+  const norm = v => (v === null || v === undefined || v === '') ? null : v;
+  arr.sort((a, b) => {
+    for (const k of keys) {
+      const x = norm(a[k]), y = norm(b[k]);
+      if (x === null && y === null) continue;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      const nx = Number(x), ny = Number(y);
+      const bothNum = !isNaN(nx) && !isNaN(ny);
+      /* bothNum: 数值降序; 否则按字符串降序(ISO 日期字符串可直接比大小) */
+      const c = bothNum ? (ny - nx) : String(y).localeCompare(String(x), 'zh');
+      if (c !== 0) return c;
+    }
+    return 0;
+  });
+  return arr;
+}
+function updateSortArrows(tableId, state) {
+  /* dir===0 表示回到「原序」，而原序即默认多键排序 → 给默认键也点亮 ▼ */
+  const dflt = (state.dir === 0 && state.defaultKeys) ? state.defaultKeys : [];
+  document.querySelectorAll(`#${tableId} thead th[data-sort]`).forEach(th => {
+    const k = th.dataset.sort;
+    const on = k === state.key && state.dir !== 0;
+    const isDefault = dflt.includes(k);
+    th.classList.toggle('sorted', on || isDefault);
+    const ar = th.querySelector('.sort-ar');
+    if (ar) ar.textContent = on ? (state.dir === 1 ? '▲' : '▼') : (isDefault ? '▼' : '⇅');
+  });
+}
+function initSortable(tableId, state, rerender) {
+  document.querySelectorAll(`#${tableId} thead th[data-sort]`).forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      if (state.key !== k) { state.key = k; state.dir = 1; }
+      else if (state.dir === 1) { state.dir = -1; }
+      else { state.key = null; state.dir = 0; }
+      updateSortArrows(tableId, state);
+      rerender();
+    });
+  });
+  updateSortArrows(tableId, state);
+}
+/* index_tags 为逗号分隔串，判断是否含指定指数成分 */
+function inIndex(tags, idx) {
+  if (!idx) return true;
+  if (!tags) return false;
+  return String(tags).replace(/，/g, ',').split(',').some(t => t.trim() === idx);
+}
+/* 「指数成分」下拉(全部指数 + 各成分)，选股结果页用 */
+async function loadIndexTags() {
+  try {
+    const j = await api('/api/index_tags');
+    indexTagList = j.tags || [];
+    const opts = '<option value="">全部指数</option>' +
+      indexTagList.map(t => `<option value="${t}">${t}</option>`).join('');
+    $('idxSelect').innerHTML = opts;
+  } catch (e) { /* 下拉留空即可，筛选降级为不过滤 */ }
+}
+function filterKw(list) {
+  const kw = $('kwInput').value.trim().toLowerCase();
+  const idx = $('idxSelect').value;
+  const minInter = +($('interSelect')?.value || 0);   // 多策略交集: 命中策略数 >= N(空=不过滤)
+  const k = kw.replace(/\s/g, '');            // 名称可能含空格("万 科Ａ")，按去空格匹配
+  return list.filter(r => {
+    const code = String(r.ts_code).toLowerCase();
+    const name = String(r.name).toLowerCase().replace(/\s/g, '');
+    const nStrat = (r.strategies || '').split('、').filter(Boolean).length;
+    return inIndex(r.index_tags, idx) && (!minInter || nStrat >= minInter)
+      && (!kw || code.includes(kw) || name.includes(k));
+  });
+}
+/* 筛选框兜底: 若 stock_pick_result 内查不到匹配, 降级查询 stock_daily_quote 最近交易日 */
+let fbToken = 0;
+function setFallbackInfo(msg) {
+  const el = $('fallbackInfo');
+  if (!msg) { el.style.display = 'none'; el.innerText = ''; return; }
+  el.style.display = ''; el.innerText = msg;
+}
+async function filterResults() {
+  const kw = $('kwInput').value.trim();
+  const idx = $('idxSelect').value;
+  const list = filterKw(allResults);
+  curPage = 1;
+  /* 仅当「有代码/名称关键词 + 未选指数 + 结果表内无匹配」时才触发兜底 */
+  if (!kw || idx || list.length) {
+    setFallbackInfo('');
+    renderResults(list);
+    return;
+  }
+  const my = ++fbToken;
+  try {
+    const j = await api(`/api/daily/latest?q=${encodeURIComponent(kw)}&limit=50`);
+    if (my !== fbToken) return;                 // 防止连续输入时旧请求回填
+    const rows = j.results || [];
+    setFallbackInfo(rows.length
+      ? `⚠ 选股结果(stock_pick_result)无匹配，已降级展示 stock_daily_quote 最近交易日`
+        + `（${fmtTd(j.trade_date)}）数据：${rows.length} 只`
+      : '⚠ 选股结果与最近交易日行情(stock_daily_quote)均未匹配到该代码/名称');
+    renderResults(rows);
+  } catch (e) {
+    if (my !== fbToken) return;
+    setFallbackInfo('⚠ 兜底查询失败：' + e.message);
+    renderResults([]);
+  }
+}
+/* 分页渲染：默认每页 20 只，可通过 pageSizeSel 调整；
+   表格默认只列 代码/名称/命中策略/基准日，其余基础信息悬停行时以悬浮卡展示 */
+const escH = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+function renderResults(list) {
+  lastFiltered = list;
+  /* 未点表头(=默认)时按 基准日↓ + 连涨天数↓；点了表头则按其单键规则 */
+  const sorted = resultSort.key
+    ? sortRows(list, resultSort.key, resultSort.dir)
+    : defaultSortRows(list, resultSort.defaultKeys);
+  const total = sorted.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (curPage > pages) curPage = pages;
+  if (!total) {
+    $('resultBody').innerHTML = '<tr><td colspan="6" style="color:var(--dim)">无数据</td></tr>';
+    $('pagerInfo').innerText = '共 0 只';
+    return;
+  }
+  const start = (curPage - 1) * pageSize;
+  const rows = sorted.slice(start, start + pageSize);
+  /* 连涨天数：正=连续上涨(红), 负=连续下跌(绿), 0/空=平盘 */
+  const contTxt = cd => cd === null || cd === undefined ? '-'
+    : (cd > 0 ? '+' + cd : String(cd));
+  const contCls = cd => cd === null || cd === undefined || cd === 0 ? ''
+    : (cd > 0 ? 'up' : 'down');
+  /* 连涨涨幅：与连涨天数同段的累计涨跌幅 */
+  const cpTxt = cp => cp === null || cp === undefined ? '-'
+    : (cp > 0 ? '+' : '') + fmt(cp) + '%';
+  const cpCls = cp => cp === null || cp === undefined || +cp === 0 ? ''
+    : (cp > 0 ? 'up' : 'down');
+  $('resultBody').innerHTML = rows.map((r, i) => {
+    const chgCls = r.pct_chg >= 0 ? 'up' : 'down';
+    const chgTxt = r.pct_chg === null ? '-' : fmt(r.pct_chg) + '%';
+    const tip = `<div class="row-tip" onclick="event.stopPropagation()">
+      <div class="tip-title">${escH(r.name)}（${escH(r.ts_code)}）</div>
+      <div class="tip-grid">
+        <span class="k">行业</span><span>${r.industry ? `<span class="stag tag-ind">${escH(r.industry)}</span>` : '-'}</span>
+        <span class="k">指数成分</span><span>${r.index_tags ? tagList(r.index_tags, 'tag-idx', 4) : '-'}</span>
+        <span class="k">概念板块</span><span>${r.concepts ? tagList(r.concepts, 'tag-con', 6) : '-'}</span>
+        <span class="k">收盘价</span><span class="num">${fmt(r.close_price)}</span>
+        <span class="k">涨跌幅</span><span class="num ${chgCls}">${chgTxt}</span>
+        <span class="k">连涨天数</span><span class="num ${contCls(r.cont_days)}">${contTxt(r.cont_days)}</span>
+        <span class="k">连涨涨幅</span><span class="num ${cpCls(r.cont_pct)}">${cpTxt(r.cont_pct)}</span>
+        <span class="k">量比</span><span class="num">${r.vol_ratio == null ? '-' : fmt(r.vol_ratio)}</span>
+        <span class="k">换手率</span><span class="num">${r.turnover_rate == null ? '-' : fmt(r.turnover_rate) + '%'}</span>
+        <span class="k">基准日</span><span>${escH(r.trade_date || '-')}</span>
+        <span class="k">得分</span><span class="num">${fmt(r.score, 3)}</span>
+        <span class="k">批次</span><span class="code">${escH(r.batch_no || '-')}</span>
+      </div>
+      <div class="tip-reason">${escH(r.hit_reason || '无命中原因')}</div>
+    </div>`;
+    return `
+    <tr class="pickrow" onclick="QP.pick('result','${r.ts_code}')">
+      <td class="code tip-anchor"><span class="ell" title="${escH(r.ts_code)}">${escH(r.ts_code)}</span>${tip}</td>
+      <td class="ell"><b title="${escH(r.name)}">${escH(r.name)}</b></td>
+      <td style="white-space:normal">${r.is_fallback ? '<span class="badge">兜底行情</span>' : tagList((r.strategies || '').replace(/、/g, ','), 'tag-idx', 3)}</td>
+      <td class="ell dt" title="${escH(r.trade_date || '')}">${r.trade_date ? String(r.trade_date).slice(5) : '-'}</td>
+      <td class="r num ${contCls(r.cont_days)}">${contTxt(r.cont_days)}</td>
+      <td class="r num ${cpCls(r.cont_pct)}">${cpTxt(r.cont_pct)}</td>
+    </tr>`;
+  }).join('');
+  $('pagerInfo').innerText = `第 ${curPage} / ${pages} 页 · 共 ${total} 只`;
+}
+function gotoResultPage(p) {
+  const pages = Math.max(1, Math.ceil(lastFiltered.length / pageSize));
+  if (p < 1 || p > pages || p === curPage) return;
+  curPage = p;
+  renderResults(lastFiltered);
+}
+function onPageSize(v) {
+  pageSize = +v;
+  curPage = 1;
+  renderResults(lastFiltered);
+}
+
+/* ---- 多策略交集模块已下线(2026-10-19, Epic#6): 功能并入选股结果页「多策略交集」筛选下拉 ---- */
+let marketLoaded = false;       // 市场面板懒加载标记
+
+/* ---- 回测 ---- */
+function quickBacktest(code) {
+  gotoPage('backtest');
+  $('btStrategy').value = code;
+  runBacktest();
+}
+async function runBacktest() {
+  const code = $('btStrategy').value, days = $('btDays').value;
+  $('btInfo').innerText = '回测执行中...';
+  $('btStats').innerHTML = '';
+  $('btDisc').style.display = 'none';
+  $('btTable').style.display = 'none';
+  try {
+    const j = await api(`/api/backtest/${code}?days_ago=${days}`);
+    const s = j.stats;
+    $('btInfo').innerText = `${j.strategy_name}：模拟 ${j.buy_date} 选股买入，对照 持有至 ${j.end_date}（${j.hold_trading_days} 个交易日）与纪律化退出`;
+    if (!s.hits) { $('btInfo').innerText += ' ｜ 当日无命中'; return; }
+    const cells = [
+      ['命中数', s.hits, ''], ['胜率', s.win_rate + '%', s.win_rate >= 50 ? 'up' : 'down'],
+      ['平均收益', s.avg_return + '%', s.avg_return >= 0 ? 'up' : 'down'],
+      ['中位收益', s.median_return + '%', s.median_return >= 0 ? 'up' : 'down'],
+      ['最大盈利', s.max_return + '%', 'up'], ['最大亏损', s.max_loss + '%', 'down'],
+    ];
+    if (s.suspended_hits) cells.push(['涉停牌', s.suspended_hits + (s.suspended_now ? `(在停${s.suspended_now})` : ''), '']);
+    $('btStats').innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--dim)">口径一：买入后持有至今（无止损纪律）</div>' +
+      cells.map(([k, v, c]) => `<div class="stat-cell"><div class="v num ${c}">${v}</div><div class="k">${k}</div></div>`).join('');
+    // 纪律化退出对照
+    const dd = j.discipline, dm = {};
+    if (dd && dd.stats && dd.stats.hits) {
+      const ds = dd.stats, dp = dd.params;
+      const exitTxt = Object.entries(dd.exits).map(([k, v]) => `${k}×${v}`).join(' ');
+      $('btDiscTip').innerText = `口径二：纪律化退出（-${dp.stop_pct}%硬止损 / +${dp.breakeven_trigger}%上移保本 / T+${dp.max_hold_days}强平）｜退出分布: ${exitTxt}`;
+      const dc = [
+        ['胜率', ds.win_rate + '%', ds.win_rate >= 50 ? 'up' : 'down'],
+        ['平均收益', ds.avg_return + '%', ds.avg_return >= 0 ? 'up' : 'down'],
+        ['中位收益', ds.median_return + '%', ds.median_return >= 0 ? 'up' : 'down'],
+        ['平均持有', ds.avg_hold_days + '日', ''],
+        ['最大盈利', ds.max_return + '%', 'up'], ['最大亏损', ds.max_loss + '%', 'down'],
+      ];
+      $('btDiscStats').innerHTML = dc.map(([k, v, c]) =>
+        `<div class="stat-cell"><div class="v num ${c}">${v}</div><div class="k">${k}</div></div>`).join('');
+      $('btDisc').style.display = '';
+      (dd.details || []).forEach(x => dm[x.ts_code] = x);
+    }
+    const rows = [...j.top10.map(r => ({...r, tag: 'TOP'})), ...j.bottom5.map(r => ({...r, tag: 'BOTTOM'}))];
+    $('btBody').innerHTML = rows.map((r, i) => {
+      const x = dm[r.ts_code];
+      return `<tr><td class="code">${i + 1}</td><td class="code">${r.ts_code}</td><td><b>${r.name}</b>${r.suspended_now ? ' <span style="color:var(--warn,#c80);font-size:11px">停牌中</span>' : (r.suspended ? ' <span style="color:var(--dim);font-size:11px">曾停牌</span>' : '')}</td><td>${r.buy_date}</td>
+      <td class="r num">${r.buy_price}</td><td class="r num">${r.now_price}</td>
+      <td class="r num ${r.return_pct >= 0 ? 'up' : 'down'}"><b>${r.return_pct}%</b></td>
+      <td class="r num ${x ? (x.exit_return >= 0 ? 'up' : 'down') : ''}">${x ? x.exit_return + '%' : '-'}</td>
+      <td>${x ? x.exit_reason + '(' + x.hold_days + '日)' : '-'}</td></tr>`;
+    }).join('');
+    $('btTable').style.display = '';
+  } catch (e) { $('btInfo').innerText = '❌ ' + e.message; }
+}
+
+/* ===== 指标库: 主图(K线/分时) + 可选副图(1-3张, 指标可选) =====
+   选股结果 / 多策略交集 共用同一套行情面板(QP)，此处只保留副图指标定义与计算 */
+const SUB_DEFS = {
+  day: ['VOL', 'MACD', 'KDJ', 'RSI', 'BIAS', 'OBV', 'WR', 'CCI'],
+  min: ['VOL', 'MACD', 'KDJ', 'RSI'],
+};
+
+/* ---- 指标计算库(仿同花顺常用副图指标) ---- */
+const maN = (arr, n) => arr.map((_, i) => {
+  if (i < n - 1) return null;
+  let s = 0; for (let j = i - n + 1; j <= i; j++) s += arr[j];
+  return s / n;
+});
+const emaN = (arr, n) => {
+  const k = 2 / (n + 1), out = []; let e = null;
+  arr.forEach(v => { e = e === null ? v : v * k + e * (1 - k); out.push(e); });
+  return out;
+};
+const csma = (arr, n, m) => {   // 中式移动平均 Y=(M*X+(N-M)*Y')/N
+  const out = []; let y = null;
+  arr.forEach(v => { y = y === null ? v : (m * v + (n - m) * y) / n; out.push(y); });
+  return out;
+};
+const rollMax = (arr, n) => arr.map((_, i) => Math.max(...arr.slice(Math.max(0, i - n + 1), i + 1)));
+const rollMin = (arr, n) => arr.map((_, i) => Math.min(...arr.slice(Math.max(0, i - n + 1), i + 1)));
+/* 标准差(总体, 与同花顺/通达信 BOLL 口径一致) */
+const stdN = (arr, n) => arr.map((_, i) => {
+  if (i < n - 1) return null;
+  const w = arr.slice(i - n + 1, i + 1);
+  const m = w.reduce((a, b) => a + b, 0) / n;
+  return Math.sqrt(w.reduce((a, b) => a + (b - m) * (b - m), 0) / n);
+});
+/* BOLL 布林带(n=20, k=2): 中轨=MA20, 上下轨=中轨±k×标准差 */
+function boll(close, n = 20, k = 2) {
+  const mid = maN(close, n), sd = stdN(close, n);
+  return {
+    mid,
+    up: mid.map((m, i) => (m === null || sd[i] === null) ? null : m + k * sd[i]),
+    dn: mid.map((m, i) => (m === null || sd[i] === null) ? null : m - k * sd[i]),
+  };
+}
+
+function calcSub(name, bars, type) {
+  const C = bars.map(b => +b.close), H = bars.map(b => +b.high), L = bars.map(b => +b.low);
+  const V = bars.map(b => b.vol || 0);
+  const UP = '#f0423c', DN = '#1eb14e';
+  switch (name) {
+    case 'VOL': {
+      const colors = bars.map(b => type === 'day' ? (b.close >= b.open ? UP : DN) : (b.close >= C[0] ? UP : DN));
+      return { title: 'VOL(成交量)', bars: { data: V, colors },
+        lines: [{ name: 'MA5', color: '#f39c12', data: maN(V, 5) },
+                { name: 'MA10', color: '#8e44ad', data: maN(V, 10) }] };
+    }
+    case 'MACD': {
+      const e12 = emaN(C, 12), e26 = emaN(C, 26);
+      const dif = C.map((_, i) => e12[i] - e26[i]);
+      const dea = emaN(dif, 9);
+      const hist = dif.map((v, i) => (v - dea[i]) * 2);
+      /* 柱体强弱配色(同花顺惯例): 较前一根放大用实色, 缩短用浅色 */
+      const SU = '#e8342e', WU = '#f6b0ad', SD = '#12a150', WD = '#96dab0';
+      const colors = hist.map((v, i) => {
+        const grow = Math.abs(v) >= Math.abs(i ? hist[i - 1] : 0);
+        if (v >= 0) return grow ? SU : WU;
+        return grow ? SD : WD;
+      });
+      return { title: 'MACD(12,26,9)', zero: true,
+        bars: { data: hist, colors },
+        lines: [{ name: 'DIF', color: '#2980b9', data: dif },
+                { name: 'DEA', color: '#f39c12', data: dea }] };
+    }
+    case 'KDJ': {
+      const h9 = rollMax(H, 9), l9 = rollMin(L, 9);
+      const rsv = C.map((c, i) => h9[i] === l9[i] ? 50 : (c - l9[i]) / (h9[i] - l9[i]) * 100);
+      const K = csma(rsv, 3, 1), D = csma(K, 3, 1), J = K.map((k, i) => 3 * k - 2 * D[i]);
+      return { title: 'KDJ(9,3,3)', refs: [20, 50, 80],
+        lines: [{ name: 'K', color: '#2980b9', data: K },
+                { name: 'D', color: '#f39c12', data: D }, { name: 'J', color: '#8e44ad', data: J }] };
+    }
+    case 'RSI': {
+      const d = C.map((c, i) => i ? c - C[i - 1] : 0);
+      const rsi = n => {
+        const up = csma(d.map(x => Math.max(x, 0)), n, 1), dn = csma(d.map(x => Math.max(-x, 0)), n, 1);
+        return d.map((_, i) => dn[i] === 0 ? 100 : 100 - 100 / (1 + up[i] / dn[i]));
+      };
+      return { title: 'RSI(6,12,24)', refs: [30, 50, 70],
+        lines: [{ name: 'RSI6', color: '#2980b9', data: rsi(6) },
+                { name: 'RSI12', color: '#f39c12', data: rsi(12) }, { name: 'RSI24', color: '#8e44ad', data: rsi(24) }] };
+    }
+    case 'BIAS': {
+      const bias = n => { const m = maN(C, n); return C.map((c, i) => m[i] === null ? null : (c - m[i]) / m[i] * 100); };
+      return { title: 'BIAS(6,12,24)', zero: true, lines: [{ name: 'BIAS6', color: '#2980b9', data: bias(6) },
+        { name: 'BIAS12', color: '#f39c12', data: bias(12) }, { name: 'BIAS24', color: '#8e44ad', data: bias(24) }] };
+    }
+    case 'OBV': {
+      let o = 0;
+      const data = C.map((c, i) => { if (i > 0) o += c > C[i - 1] ? V[i] : (c < C[i - 1] ? -V[i] : 0); return o; });
+      return { title: 'OBV(能量潮)', lines: [{ name: 'OBV', color: '#2980b9', data },
+        { name: 'MAOBV30', color: '#f39c12', data: maN(data, 30) }] };
+    }
+    case 'WR': {
+      const wr = n => { const h = rollMax(H, n), l = rollMin(L, n);
+        return C.map((c, i) => h[i] === l[i] ? 50 : (h[i] - c) / (h[i] - l[i]) * 100); };
+      return { title: 'WR(6,14)(威廉)', refs: [20, 50, 80],
+        lines: [{ name: 'WR6', color: '#2980b9', data: wr(6) },
+                { name: 'WR14', color: '#f39c12', data: wr(14) }] };
+    }
+    case 'CCI': {
+      const tp = C.map((c, i) => (c + H[i] + L[i]) / 3), m = maN(tp, 14);
+      const data = tp.map((t, i) => {
+        if (m[i] === null) return null;
+        let s = 0, cnt = 0;
+        for (let j = Math.max(0, i - 13); j <= i; j++) { s += Math.abs(tp[j] - m[i]); cnt++; }
+        const md = s / cnt;
+        return md === 0 ? 0 : (t - m[i]) / (0.015 * md);
+      });
+      return { title: 'CCI(14)', zero: true, refs: [-100, 100],
+        lines: [{ name: 'CCI', color: '#2980b9', data }] };
+    }
+  }
+  return { title: name, lines: [] };
+}
+
+const fmtBig = v => {
+  const a = Math.abs(v);
+  if (a >= 1e8) return (v / 1e8).toFixed(2) + '亿';
+  if (a >= 1e4) return (v / 1e4).toFixed(1) + '万';
+  return a >= 100 ? v.toFixed(0) : v.toFixed(2);
+};
+
+/* ===== ECharts 图表引擎: 主图(K线/分时) + 可选副图(1-3张) =====
+   支持: 十字光标悬浮显示指标值 / 滚轮缩放 / 按住拖动平移 / 底部滚动条
+   详情设置: 周期(分时/30分/日K/五日/周K/月K) / 实心|空心阳线 / 显示缺口 */
+const UP_C = '#f0423c', DN_C = '#1eb14e';
+const MA_DEFS = [['MA5', 5, '#2980b9'], ['MA10', 10, '#f39c12'], ['MA20', 20, '#8e44ad']];
+const fmtN = v => (v === null || v === undefined || isNaN(+v)) ? '-' : (+v).toFixed(2);
+
+/* ---- 详情设置(持久化) ---- */
+let chartCfg = { period: 'day', candle: 'solid', showGap: false, overlay: 'ma' };
+try { Object.assign(chartCfg, JSON.parse(localStorage.getItem('chartCfg') || '{}')); } catch (e) {}
+function saveCfg() { localStorage.setItem('chartCfg', JSON.stringify(chartCfg)); }
+
+/* ---- 图表布局(主图与第一副图之间留间隙放悬浮副图控件) ---- */
+function chartLayout(H, nSub) {
+  const padT = 36, padB = 46, gapMain = 34, gapSub = 22;
+  const avail = H - padT - padB - (nSub ? gapMain + gapSub * (nSub - 1) : 0);
+  const mainH = nSub ? Math.round(avail * 0.60) : avail;
+  const subH = nSub ? Math.floor((avail - mainH) / nSub) : 0;
+  return { padT, padB, gapMain, gapSub, mainH, subH };
+}
+function placeSubCtl(ctl, H, nSub) {
+  if (!ctl) return;
+  const L = chartLayout(H, nSub);
+  ctl.style.top = (L.padT + L.mainH + Math.max(2, (L.gapMain - 24) / 2)) + 'px';
+}
+
+/* ---- 周期聚合: 日K → 五日/周K/月K ---- */
+function aggBars(bars, mode) {
+  const out = [];
+  let cur = null, curKey = null;
+  const keyOf = (b, idx) => {
+    if (mode === 'w5') return Math.floor(idx / 5);   // 5个交易日一根
+    const d = b.trade_date;
+    if (mode === 'month') return d.slice(0, 7);
+    const dt = new Date(d + 'T00:00:00');            // ISO周
+    const day = (dt.getDay() + 6) % 7;
+    dt.setDate(dt.getDate() - day + 3);
+    const firstThu = new Date(dt.getFullYear(), 0, 4);
+    firstThu.setDate(firstThu.getDate() - ((firstThu.getDay() + 6) % 7) + 3);
+    return dt.getFullYear() + '-W' + (1 + Math.round((dt - firstThu) / 6048e5));
+  };
+  bars.forEach((b, idx) => {
+    const k = keyOf(b, idx);
+    if (k !== curKey) {
+      if (cur) out.push(cur);
+      curKey = k;
+      cur = { trade_date: b.trade_date, open: +b.open, high: +b.high, low: +b.low,
+              close: +b.close, vol: b.vol || 0, amount: b.amount || 0 };
+    } else {
+      cur.high = Math.max(cur.high, +b.high);
+      cur.low = Math.min(cur.low, +b.low);
+      cur.close = +b.close;
+      cur.trade_date = b.trade_date;
+      cur.vol += b.vol || 0;
+      cur.amount += b.amount || 0;
+    }
+  });
+  if (cur) out.push(cur);
+  return out;
+}
+
+/* ---- 5分钟 → 30分(每6根合一) ---- */
+function aggMinute(bars, g) {
+  const out = [];
+  for (let i = 0; i < bars.length; i += g) {
+    const grp = bars.slice(i, i + g);
+    out.push({
+      bar_time: grp[grp.length - 1].bar_time,
+      open: +grp[0].open, high: Math.max(...grp.map(b => +b.high)),
+      low: Math.min(...grp.map(b => +b.low)), close: +grp[grp.length - 1].close,
+      vol: grp.reduce((s, b) => s + (b.vol || 0), 0),
+    });
+  }
+  return out;
+}
+
+/* ---- 跳空缺口标注: 向上缺口(今低>昨高)红 / 向下缺口(今高<昨低)绿, 延伸到回补或最新 ---- */
+function gapMarkArea(bars, dates) {
+  const data = [], n = bars.length;
+  for (let i = 1; i < n; i++) {
+    const pH = +bars[i - 1].high, pL = +bars[i - 1].low;
+    const lo = +bars[i].low, hi = +bars[i].high;
+    let g = null;
+    if (lo > pH) {
+      let end = n - 1;
+      for (let j = i + 1; j < n; j++) if (+bars[j].low <= pH) { end = j; break; }
+      g = { y1: pH, y2: lo, end, color: 'rgba(240,66,60,0.16)', border: 'rgba(240,66,60,0.55)' };
+    } else if (hi < pL) {
+      let end = n - 1;
+      for (let j = i + 1; j < n; j++) if (+bars[j].high >= pL) { end = j; break; }
+      g = { y1: pL, y2: hi, end, color: 'rgba(30,177,78,0.14)', border: 'rgba(30,177,78,0.55)' };
+    }
+    if (g) data.push([
+      { xAxis: dates[i], yAxis: g.y1,
+        itemStyle: { color: g.color, borderColor: g.border, borderWidth: 1, borderType: 'dashed' } },
+      { xAxis: dates[g.end], yAxis: g.y2 },
+    ]);
+  }
+  return { silent: true, data };
+}
+
+function getChart(dom) {
+  return echarts.getInstanceByDom(dom) || echarts.init(dom);
+}
+
+/* ---- 网格左右留白: 左侧紧凑，右侧留给主图价格轴(置于右侧，同花顺/东财惯例) ---- */
+const GRID_L = 8, GRID_R = 58;
+
+/* K线高度自适应屏幕：优先取右侧图表容器(chartWrap)的实测可用高度 —— 该容器由 flex
+   锁定在视口内(.result-split 定高 + 面板列 flex)，所以 K 线整体恰好贴合屏幕，不再触发
+   整页上下滚动条。副图数量不改变总高度，只在容器内部重新分配(副图多则主图略矮)。 */
+function fitChartHeight(wrap) {
+  const h = wrap ? (wrap.clientHeight || 0) : 0;
+  if (h > 0) return Math.max(180, Math.round(h));   // 容器已布局：直接用实测可用高度
+  /* 兜底：尚未选出股票(容器 display:none) 时，按视口估算 */
+  const vh = window.innerHeight || 800;
+  return Math.round(Math.min(560, Math.max(300, vh - 330)));
+}
+
+/* ---- K线缩放：柱子随缩放变大/变小，柱间空隙固定(BAR_GAP_PX) ---- */
+const BAR_GAP_PX = 4, BAR_MAX_PX = 48;
+function fixBarGap(inst, n) {
+  if (!inst || !n) return;
+  try {
+    const opt = inst.getOption();
+    const series = opt.series || [];
+    /* 蜡烛与副图柱(成交量/MACD…)共用同一 x 轴刻度，宽度必须一致，否则上下错位 */
+    const target = series.map(s => s.type === 'candlestick' || s.type === 'bar');
+    if (!target.some(Boolean)) return;  // 纯折线(分时)无需处理
+    const dz = (opt.dataZoom || [])[0] || {};
+    const start = dz.start ?? 0, end = dz.end ?? 100;
+    const span = Math.max(1, n * (end - start) / 100);      // 当前可见根数
+    const gridW = inst.getWidth() - GRID_L - GRID_R;
+    const bw = Math.max(1, Math.min(BAR_MAX_PX, gridW / span - BAR_GAP_PX));
+    inst.setOption({ series: target.map(on => on ? { barWidth: bw } : {}) });
+  } catch (e) {}
+}
+function bindBarGap(inst, n) {
+  inst._barN = n;
+  inst.off('datazoom');
+  inst.on('datazoom', () => fixBarGap(inst, inst._barN));
+  fixBarGap(inst, n);
+}
+
+function buildChartOption(cfg) {
+  const bars = cfg.bars, type = cfg.type, H = cfg.height, n = bars.length;
+  const dates = bars.map(b => type === 'day' ? b.trade_date : String(b.bar_time).slice(11, 16));
+  const kdata = bars.map(b => [+b.open, +b.close, +b.low, +b.high]);
+  const subs = cfg.subs || [];
+  const subInds = subs.map(s => calcSub(s, bars, type));
+  const nSub = subs.length;
+
+  /* ---- 布局: 主图 + N副图 + 底部滚动条(主图与副图间留间隙放悬浮控件) ---- */
+  const L = chartLayout(H, nSub);
+  const padT = L.padT, mainH = L.mainH, subH = L.subH;
+  const grids = [{ left: GRID_L, right: GRID_R, top: padT, height: mainH }];
+  for (let j = 0; j < nSub; j++)
+    grids.push({ left: GRID_L, right: GRID_R,
+                 top: padT + mainH + L.gapMain + j * (subH + L.gapSub), height: subH });
+  const axisIdx = Array.from({ length: nSub + 1 }, (_, i) => i);
+
+  const xAxes = axisIdx.map(i => ({
+    type: 'category', gridIndex: i, data: dates, boundaryGap: true,
+    axisLine: { lineStyle: { color: '#dfe3e8' } }, axisTick: { show: false },
+    axisLabel: { show: i === nSub, fontSize: 11, color: '#888', margin: 10, hideOverlap: true },
+    splitLine: { show: false },
+  }));
+  /* 主图价格轴放在右侧(同花顺/东财/雪球惯例)，避免刻度压在K线上；副图数值轴保留在左侧内嵌 */
+  const yAxes = axisIdx.map(i => {
+    const isMain = i === 0;
+    const y = {
+      scale: true, gridIndex: i, position: isMain ? 'right' : 'left',
+      splitNumber: isMain ? 5 : 3,
+      axisLine: { show: isMain, lineStyle: { color: '#dfe3e8' } },
+      axisTick: { show: false },
+      axisLabel: isMain
+        ? { show: true, inside: false, fontSize: 11, color: '#555', margin: 6, formatter: v => fmtN(v) }
+        : { show: true, inside: true, fontSize: 10, color: '#999', margin: 4, formatter: fmtBig },
+      splitLine: { lineStyle: { color: isMain ? '#f0f1f3' : '#f6f7f9' } },
+    };
+    const ind = subInds[i - 1];
+    if (ind && ind.bars && !ind.zero) y.min = 0;
+    return y;
+  });
+
+  /* ---- 主图系列(MA 由前端按收盘价统一计算, 各周期口径一致) ---- */
+  const series = [], titles = [], legendData = [];
+  let maData = null, bollData = null;
+  /* 主图叠加方式: MA / BOLL / MA+BOLL / 不叠加(详情设置可切) */
+  const overlay = type === 'day' ? (cfg.overlay || 'ma') : 'none';
+  const showMA = overlay === 'ma' || overlay === 'both';
+  const showBOLL = overlay === 'boll' || overlay === 'both';
+  if (type === 'day') {
+    const C = bars.map(b => +b.close);
+    maData = MA_DEFS.map(([, n2]) => maN(C, n2));
+    bollData = boll(C, 20, 2);
+    const solid = (cfg.candle || 'solid') === 'solid';
+    /* 最新收盘价水平虚线: 一眼看清现价与历史区间的关系 */
+    const lastClose = C[n - 1];
+    const lastUp = n > 1 ? lastClose >= C[n - 2] : lastClose >= +bars[n - 1].open;
+    series.push({
+      name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: kdata, z: 2,
+      itemStyle: { color: solid ? UP_C : '#ffffff', color0: DN_C,
+                   borderColor: UP_C, borderColor0: DN_C, borderWidth: 1 },
+      ...(cfg.showGap ? { markArea: gapMarkArea(bars, dates) } : {}),
+      markLine: {
+        symbol: 'none', silent: true, animation: false,
+        lineStyle: { color: lastUp ? UP_C : DN_C, type: 'dashed', width: 1, opacity: 0.75 },
+        label: { show: false },
+        data: [{ yAxis: lastClose }],
+      },
+    });
+    /* BOLL 画在 MA 之下(z=2.5), 避免遮挡K线 */
+    if (showBOLL) {
+      const BOLL_DEFS = [['BOLL-UP', bollData.up, '#b07cc6', 'dashed'],
+                         ['BOLL-MID', bollData.mid, '#c39bd3', 'solid'],
+                         ['BOLL-DN', bollData.dn, '#b07cc6', 'dashed']];
+      BOLL_DEFS.forEach(([nm, data, color, tp]) => series.push({
+        name: nm, type: 'line', xAxisIndex: 0, yAxisIndex: 0, z: 2.5,
+        data, symbol: 'none', lineStyle: { width: 1, color, type: tp, opacity: 0.9 },
+      }));
+      legendData.push(...BOLL_DEFS.map(d => d[0]));
+    }
+    if (showMA) {
+      MA_DEFS.forEach(([nm, , color], k) => series.push({
+        name: nm, type: 'line', xAxisIndex: 0, yAxisIndex: 0, z: 3,
+        data: maData[k], symbol: 'none', lineStyle: { width: 1.3, color },
+      }));
+      legendData.push(...MA_DEFS.map(d => d[0]));
+    }
+  } else {
+    titles.push({ text: `当日分时（${cfg.date || ''}）`, left: 12, top: 8,
+      textStyle: { fontSize: 12, color: '#555', fontWeight: 'normal' } });
+    series.push({
+      name: '价格', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
+      data: bars.map(b => +b.close), symbol: 'none',
+      lineStyle: { width: 1.6, color: '#2980b9' }, areaStyle: { color: 'rgba(41,128,185,0.10)' },
+    });
+  }
+
+  /* ---- 副图系列: 指标标题带最新值 + 超买超卖参考线 ---- */
+  const lastOf = arr => {
+    for (let i = arr.length - 1; i >= 0; i--)
+      if (arr[i] !== null && arr[i] !== undefined && !isNaN(arr[i])) return arr[i];
+    return null;
+  };
+  subInds.forEach((ind, j) => {
+    const gi = j + 1, first = series.length;
+    if (ind.bars) series.push({
+      name: ind.title, type: 'bar', xAxisIndex: gi, yAxisIndex: gi,
+      data: ind.bars.data.map((v, i) => ({ value: v, itemStyle: { color: ind.bars.colors[i] } })),
+    });
+    (ind.lines || []).forEach(l => series.push({
+      name: l.name, type: 'line', xAxisIndex: gi, yAxisIndex: gi,
+      data: l.data, symbol: 'none', lineStyle: { width: 1.1, color: l.color },
+    }));
+    /* 超买/超卖/强弱分界参考线(同花顺惯例) 挂在副图首个系列 */
+    if (ind.refs && ind.refs.length && series[first]) {
+      series[first].markLine = {
+        symbol: 'none', silent: true, animation: false,
+        lineStyle: { color: '#c8ccd2', type: 'dashed', width: 1 },
+        label: { show: false },
+        data: ind.refs.map(v => ({ yAxis: v })),
+      };
+    }
+    /* 标题右侧显示最新值(同花顺风格: MACD(12,26,9)  DIF 0.12 DEA 0.08) */
+    const vals = [];
+    (ind.lines || []).forEach(l => {
+      const v = lastOf(l.data);
+      vals.push(l.name + ' ' + (v === null ? '-' : fmtN(v)));
+    });
+    const tail = vals.join('  ');
+    titles.push({ text: ind.title + (tail ? '　' + tail : ''),
+      left: 12, top: grids[gi].top + 2,
+      textStyle: { fontSize: 12, color: '#777', fontWeight: 'normal' } });
+  });
+
+  /* ---- 悬浮提示 ---- */
+  const fmtTooltip = ps => {
+    if (!ps || !ps.length) return '';
+    const i = ps[0].dataIndex, b = bars[i];
+    if (!b) return '';
+    const rows = [];
+    const line = (k, v, color) =>
+      `<div style="display:flex;justify-content:space-between;gap:18px;line-height:1.8">` +
+      `<span style="color:#888">${k}</span>` +
+      `<span style="font-weight:bold;font-variant-numeric:tabular-nums;${color ? 'color:' + color : ''}">${v}</span></div>`;
+    let head = `<div style="font-weight:bold;margin-bottom:2px">${dates[i]}</div>`;
+    if (type === 'day') {
+      const up = +b.close >= +b.open, cc = up ? UP_C : DN_C;
+      const pre = i > 0 ? +bars[i - 1].close : +b.open;
+      const chgAmt = +b.close - pre, chgPct = pre ? chgAmt / pre * 100 : 0;
+      const amp = pre ? (+b.high - +b.low) / pre * 100 : 0;
+      rows.push(line('开盘', fmtN(b.open), cc), line('最高', fmtN(b.high), cc),
+                line('最低', fmtN(b.low), cc), line('收盘', fmtN(b.close), cc));
+      rows.push(line('涨跌额', (chgAmt >= 0 ? '+' : '') + chgAmt.toFixed(2), cc));
+      rows.push(line('涨跌幅', (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%', cc));
+      rows.push(line('振幅', amp.toFixed(2) + '%'));
+      if (b.vol != null) rows.push(line('成交量', fmtBig(b.vol) + '手'));
+      if (b.vol_ratio != null) rows.push(line('量比', fmtN(b.vol_ratio)));
+      if (b.turnover_rate != null) rows.push(line('换手率', fmtN(b.turnover_rate) + '%'));
+      if (b.amount) rows.push(line('成交额', fmtBig(b.amount)));
+      if (b.cont_days !== null && b.cont_days !== undefined) {
+        const cd2 = +b.cont_days;
+        rows.push(line('连涨天数', cd2 === 0 ? '0（平盘）' : (cd2 > 0 ? '+' + cd2 + ' 天' : cd2 + ' 天'),
+                       cd2 === 0 ? '' : (cd2 > 0 ? UP_C : DN_C)));
+      }
+      if (b.cont_pct !== null && b.cont_pct !== undefined) {
+        const cp2 = +b.cont_pct;
+        rows.push(line('连涨涨幅', (cp2 > 0 ? '+' : '') + cp2.toFixed(2) + '%',
+                       cp2 === 0 ? '' : (cp2 > 0 ? UP_C : DN_C)));
+      }
+      if (showMA) MA_DEFS.forEach(([nm, , color], k) => {
+        const v = maData && maData[k][i];
+        if (v != null) rows.push(line(nm, fmtN(v), color));
+      });
+      if (showBOLL && bollData) {
+        [['BOLL-UP', bollData.up], ['BOLL-MID', bollData.mid], ['BOLL-DN', bollData.dn]]
+          .forEach(([nm, d]) => { if (d[i] != null) rows.push(line(nm, fmtN(d[i]), '#b07cc6')); });
+      }
+    } else {
+      rows.push(line('价格', fmtN(b.close)));
+      if (b.vol != null) rows.push(line('成交量', fmtBig(b.vol) + '手'));
+    }
+    subInds.forEach(ind => {
+      const vals = [];
+      if (ind.bars && ind.bars.data[i] != null)
+        vals.push(`<span style="color:${ind.bars.colors[i]};font-variant-numeric:tabular-nums">${fmtBig(ind.bars.data[i])}</span>`);
+      (ind.lines || []).forEach(l => {
+        const v = l.data[i];
+        if (v !== null && v !== undefined && !isNaN(v))
+          vals.push(`<span style="color:${l.color};font-variant-numeric:tabular-nums">${l.name}:${fmtBig(v)}</span>`);
+      });
+      if (vals.length)
+        rows.push(`<div style="margin-top:3px;color:#888">${ind.title.replace(/\(.*\)/, '')}</div>` +
+                  `<div style="display:flex;gap:14px">${vals.join('')}</div>`);
+    });
+    return head + rows.join('');
+  };
+
+  /* ---- 缩放: 滚轮/拖动(inside) + 底部滚动条(slider)
+     默认只显示最近约 80 根，蜡烛足够宽 → 清晰可辨(同花顺/东财默认约 60~90 根) ---- */
+  const VISIBLE_BARS = 80;
+  const defaultStart = (type === 'day' && n > VISIBLE_BARS)
+    ? Math.max(0, 100 - VISIBLE_BARS * 100 / n) : 0;
+  return {
+    animation: false,
+    legend: {
+      show: type === 'day' && legendData.length > 0, data: legendData, top: 6, left: 12,
+      itemWidth: 18, itemHeight: 2, icon: 'rect', itemGap: 14,
+      textStyle: { fontSize: 12, color: '#666' },
+    },
+    title: titles,
+    grid: grids, xAxis: xAxes, yAxis: yAxes, series,
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,   // 浮窗限制在图表容器内，防止贴近上/右边缘时被裁切遮挡
+      axisPointer: {
+        type: 'cross', lineStyle: { color: '#8c8c8c', type: 'dashed', width: 1 },
+        crossStyle: { color: '#8c8c8c', type: 'dashed', width: 1 },
+        label: { backgroundColor: '#666', fontSize: 11, padding: [3, 6] },
+      },
+      backgroundColor: 'rgba(255,255,255,0.98)', borderColor: '#e0e3e7', borderWidth: 1,
+      textStyle: { color: '#333', fontSize: 13 }, padding: [10, 14],
+      extraCssText: 'box-shadow:0 6px 22px rgba(0,0,0,.14);border-radius:4px;',
+      formatter: fmtTooltip,
+    },
+    dataZoom: [
+      { type: 'inside', xAxisIndex: axisIdx, start: defaultStart, end: 100, minValueSpan: 20 },
+      {
+        type: 'slider', xAxisIndex: axisIdx, start: defaultStart, end: 100,
+        bottom: 6, height: 22, borderColor: '#e8eaed',
+        fillerColor: 'rgba(232,52,46,0.08)',
+        handleStyle: { color: '#e8342e' }, moveHandleStyle: { color: '#e8342e' },
+        dataBackground: { lineStyle: { color: '#dcdfe3' }, areaStyle: { color: '#f5f6f8' } },
+        selectedDataBackground: { lineStyle: { color: '#e8342e' }, areaStyle: { color: 'rgba(232,52,46,0.12)' } },
+        textStyle: { fontSize: 11, color: '#999' },
+      },
+    ],
+  };
+}
+
+/* =====================================================================
+   通用行情面板 QP: 搜索框 + 报价带 + 图表页签 + 详情设置 + 主图/副图
+   选股结果页挂载一个实例（原多策略交集页实例已随模块下线移除）
+   ===================================================================== */
+const QP = {};
+
+function qpHTML(key) {
+  return `
+    <div class="search-wrap">
+      <input data-r="search" placeholder="输入代码 / 名称搜索，如 600519 / 茅台" autocomplete="off">
+      <div class="suggest" data-r="suggest"></div>
+    </div>
+
+    <div class="quote-band" data-r="band" style="display:none">
+      <div class="qb-main">
+        <div class="qb-name"><span data-r="name">-</span> <span class="code" data-r="code"></span></div>
+        <div class="qb-price num" data-r="price">-</div>
+        <div class="qb-chg num" data-r="chg">-</div>
+      </div>
+      <div class="qb-cell"><span class="k">今开</span><span class="v num" data-r="open">-</span></div>
+      <div class="qb-cell"><span class="k">昨收</span><span class="v num" data-r="preClose">-</span></div>
+      <div class="qb-cell"><span class="k">最高</span><span class="v num" data-r="high">-</span></div>
+      <div class="qb-cell"><span class="k">最低</span><span class="v num" data-r="low">-</span></div>
+      <div class="qb-cell"><span class="k">成交量</span><span class="v num" data-r="vol">-</span></div>
+      <div class="qb-cell"><span class="k">量比</span><span class="v num" data-r="vr">-</span></div>
+      <div class="qb-cell"><span class="k">换手率</span><span class="v num" data-r="tr">-</span></div>
+      <div class="qb-cell"><span class="k">PE(TTM)</span><span class="v num" data-r="pe">-</span></div>
+      <div class="qb-cell"><span class="k">总市值</span><span class="v num" data-r="mv">-</span></div>
+      <div class="qb-cell"><span class="k">连涨天数</span><span class="v num" data-r="cont">-</span></div>
+      <div class="qb-cell"><span class="k">连涨涨幅</span><span class="v num" data-r="contPct">-</span></div>
+      <div class="qb-cell"><span class="k">所属板块</span><span class="v" data-r="boards">-</span></div>
+      <div class="qb-tags" data-r="tags"></div>
+    </div>
+
+    <div class="chart-tabs" data-r="tabs" style="display:none">
+      <button class="small" data-t="day" onclick="QP.showChart('${key}','day',this)">日K</button>
+      <button class="small" data-t="min" onclick="QP.showChart('${key}','min',this)">当日分时</button>
+      <button class="small" onclick="QP.toggleCfg('${key}')" style="margin-left:10px">⚙ 详情设置</button>
+    </div>
+    <div class="cfg-panel" data-r="cfg" style="display:none">
+      <span class="cfg-k">周期</span>
+      <select data-r="cfgPeriod" onchange="QP.onCfg('${key}')">
+        <option value="min">分时（当日5分钟）</option>
+        <option value="m30">30分（当日）</option>
+        <option value="day">日K</option>
+        <option value="w5">五日</option>
+        <option value="week">周K</option>
+        <option value="month">月K</option>
+      </select>
+      <span class="cfg-k">K线</span>
+      <label><input type="radio" name="cfgCandle-${key}" value="solid" onchange="QP.onCfg('${key}')"> 实心阳线</label>
+      <label><input type="radio" name="cfgCandle-${key}" value="hollow" onchange="QP.onCfg('${key}')"> 空心阳线</label>
+      <span class="cfg-k">｜</span>
+      <label><input type="checkbox" data-r="cfgGap" onchange="QP.onCfg('${key}')"> 显示缺口</label>
+      <span class="cfg-k">｜主图叠加</span>
+      <select data-r="cfgOverlay" onchange="QP.onCfg('${key}')">
+        <option value="ma">MA(5,10,20)</option>
+        <option value="boll">BOLL(20,2)</option>
+        <option value="both">MA + BOLL</option>
+        <option value="none">不叠加</option>
+      </select>
+    </div>
+
+    <div data-r="chartWrap" style="display:none;position:relative">
+      <div data-r="chart" class="chart"></div>
+      <div class="sub-ctl sub-ctl-float" data-r="subCtl" style="display:none">
+        <span style="color:#888">副图</span>
+        <select data-r="subCount" onchange="QP.setSubCount('${key}',this.value)">
+          <option value="1">1张</option><option value="2">2张</option><option value="3">3张</option>
+        </select>
+        <span data-r="subSelects"></span>
+      </div>
+    </div>
+
+    <div data-r="hint" style="color:var(--dim);padding:40px 0;text-align:center">
+      搜索并选择一只股票查看K线；或点击左侧列表中的任意行
+    </div>`;
+}
+
+function initQuotePanel(key, bodyId) {
+  const root = document.getElementById(bodyId);
+  root.innerHTML = qpHTML(key);
+  const el = role => root.querySelector(`[data-r="${role}"]`);
+  const st = {
+    key, root, el, stock: null,
+    chartType: 'day', subCount: 2,
+    subSel: { day: ['VOL', 'MACD', 'KDJ'], min: ['VOL', 'MACD', 'KDJ'] },
+    inst: null, barN: 0, seq: 0,
+  };
+  QP[key] = st;
+
+  /* 搜索建议(防抖) */
+  let timer = null;
+  el('search').addEventListener('input', function () {
+    clearTimeout(timer);
+    const q = this.value.trim();
+    if (!q) { el('suggest').style.display = 'none'; return; }
+    timer = setTimeout(async () => {
+      try {
+        const j = await api(`/api/search?q=${encodeURIComponent(q)}`);
+        if (!j.results.length) { el('suggest').style.display = 'none'; return; }
+        el('suggest').innerHTML = j.results.map(r => `
+          <div onclick="QP.pick('${key}','${r.ts_code}')">
+            <b>${r.name}</b> <span class="dim">${r.ts_code}${r.industry ? ' ｜ ' + r.industry : ''}</span>
+          </div>`).join('');
+        el('suggest').style.display = 'block';
+      } catch (e) { /* ignore */ }
+    }, 300);
+  });
+  return st;
+}
+
+/* 点击页面其它位置时收起所有面板的搜索建议 */
+document.addEventListener('click', e => {
+  Object.values(QP).forEach(st => {
+    const wrap = st.el('search').closest('.search-wrap');
+    if (!wrap.contains(e.target)) st.el('suggest').style.display = 'none';
+  });
+});
+
+/* 选中一只股票：填报价带 + 画主图 */
+QP.pick = async function (key, tsCode) {
+  const st = QP[key]; if (!st) return;
+  const el = st.el;
+  el('suggest').style.display = 'none';
+  el('search').value = tsCode;
+  try {
+    const d = await api(`/api/stock/${tsCode}`);
+    const q = await api(`/api/quote/${tsCode}`);
+    st.stock = d;
+    const quotes = q.quotes;
+    const last = quotes[quotes.length - 1];
+    const prev = quotes.length > 1 ? quotes[quotes.length - 2] : null;
+    /* /api/quote 不含 pre_close，用上一根K线收盘价推算(缺失时按涨跌幅反算) */
+    const preClose = prev ? +prev.close
+      : (last.pct_chg === null || last.pct_chg === undefined || +last.pct_chg === -100
+          ? null : +last.close / (1 + +last.pct_chg / 100));
+    const upCls = (last.pct_chg || 0) >= 0 ? 'up' : 'down';
+    el('name').innerText = d.name;
+    el('code').innerText = d.ts_code;
+    el('price').innerText = fmt(last.close);
+    el('price').className = 'qb-price num ' + upCls;
+    el('chg').innerText = `${last.pct_chg >= 0 ? '+' : ''}${fmt(last.pct_chg)}%  ` +
+      (preClose === null ? '' : (last.close - preClose >= 0 ? '+' : '') + fmt(last.close - preClose));
+    el('chg').className = 'qb-chg num ' + upCls;
+    el('open').innerText = fmt(last.open);
+    el('preClose').innerText = preClose === null ? '-' : fmt(preClose);
+    el('high').innerText = fmt(last.high);
+    el('low').innerText = fmt(last.low);
+    el('vol').innerText = last.vol ? (last.vol / 10000).toFixed(1) + '万手' : '-';
+    /* 量比 / 换手率(日频衍生指标) */
+    el('vr').innerText = last.vol_ratio === null || last.vol_ratio === undefined
+      ? '-' : Number(last.vol_ratio).toFixed(2);
+    el('tr').innerText = last.turnover_rate === null || last.turnover_rate === undefined
+      ? '-' : Number(last.turnover_rate).toFixed(2) + '%';
+    el('pe').innerText = d.pe_ttm === null ? '-' : Number(d.pe_ttm).toFixed(1);
+    el('mv').innerText = d.total_mv ? (d.total_mv / 1e8).toFixed(0) + '亿' : '-';
+    /* 连涨天数（最新交易日）：正=连涨(红) / 负=连跌(绿) / 0=平盘 */
+    const cd = last.cont_days;
+    el('cont').innerText = cd === null || cd === undefined ? '-' : (cd > 0 ? '+' + cd : String(cd));
+    el('cont').className = 'v num ' +
+      ((cd === null || cd === undefined || cd === 0) ? '' : (cd > 0 ? 'up' : 'down'));
+    /* 连涨涨幅（与连涨天数同段累计涨跌幅） */
+    const cp = last.cont_pct;
+    el('contPct').innerText = cp === null || cp === undefined ? '-'
+      : (cp > 0 ? '+' : '') + Number(cp).toFixed(2) + '%';
+    el('contPct').className = 'v num ' +
+      ((cp === null || cp === undefined || +cp === 0) ? '' : (cp > 0 ? 'up' : 'down'));
+    /* 所属板块(新浪行业)：可点击，跳转板块行情页并自动定位该板块详情 */
+    const bds = d.boards || [];
+    el('boards').innerHTML = bds.length
+      ? bds.map(b => `<a class="board-link" title="查看板块行情"
+          onclick="gotoBoard('${b.board_code}')">${escH(b.board_name || b.board_code)}</a>`).join('、')
+      : '-';
+    const tags = [];
+    if (d.industry) tags.push(`<span class="stag tag-ind">行业: ${d.industry}</span>`);
+    (d.index_tags || '').split(',').filter(Boolean).forEach(t =>
+      tags.push(`<span class="stag tag-idx">${t}</span>`));
+    (d.concepts || '').split(',').filter(Boolean).slice(0, 10).forEach(t =>
+      tags.push(`<span class="stag tag-con">${t}</span>`));
+    el('tags').innerHTML = tags.join('');
+    el('band').style.display = 'flex';
+    el('tabs').style.display = '';
+    el('chartWrap').style.display = 'block';
+    el('hint').style.display = 'none';
+    QP.syncCfg(key);
+    QP.renderChart(key);
+  } catch (e) {
+    setStatus('❌ ' + e.message);
+  }
+};
+
+/* Tab 快捷切换: 日K / 当日分时(等价于详情设置里的周期) */
+QP.showChart = function (key, type) {
+  chartCfg.period = type;
+  saveCfg();
+  QP.syncCfg(key);
+  QP.renderChart(key);
+};
+QP.toggleCfg = function (key) {
+  const p = QP[key].el('cfg');
+  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+};
+QP.syncCfg = function (key) {
+  const el = QP[key].el;
+  el('cfgPeriod').value = chartCfg.period;
+  const r = el('cfg').querySelector(`input[name="cfgCandle-${key}"][value="${chartCfg.candle}"]`);
+  if (r) r.checked = true;
+  el('cfgGap').checked = chartCfg.showGap;
+  if (el('cfgOverlay')) el('cfgOverlay').value = chartCfg.overlay || 'ma';
+};
+QP.onCfg = function (key) {
+  const el = QP[key].el;
+  chartCfg.period = el('cfgPeriod').value;
+  const r = el('cfg').querySelector(`input[name="cfgCandle-${key}"]:checked`);
+  chartCfg.candle = r ? r.value : 'solid';
+  chartCfg.showGap = el('cfgGap').checked;
+  if (el('cfgOverlay')) chartCfg.overlay = el('cfgOverlay').value;
+  saveCfg();
+  QP.renderChart(key);
+};
+QP.buildSubControls = function (key) {
+  const st = QP[key], el = st.el, defs = SUB_DEFS[st.chartType];
+  st.subSel[st.chartType] = st.subSel[st.chartType].map(s => defs.includes(s) ? s : defs[0]);
+  el('subCtl').style.display = '';
+  el('subCount').value = String(st.subCount);
+  el('subSelects').innerHTML = Array.from({ length: st.subCount }, (_, i) =>
+    `<select onchange="QP.setSubInd('${key}',${i},this.value)">` +
+    defs.map(d => `<option ${st.subSel[st.chartType][i] === d ? 'selected' : ''}>${d}</option>`).join('') +
+    `</select>`).join('');
+};
+QP.setSubCount = function (key, v) { QP[key].subCount = +v; QP.renderChart(key); };
+QP.setSubInd = function (key, i, v) { QP[key].subSel[QP[key].chartType][i] = v; QP.renderChart(key); };
+
+/* 统一渲染主图: 按 chartCfg.period(分时/30分/日K/五日/周K/月K) + 蜡烛样式 + 缺口 */
+QP.renderChart = async function (key) {
+  const st = QP[key]; if (!st || !st.stock) return;
+  const el = st.el, p = chartCfg.period, isMin = p === 'min';
+  st.chartType = isMin ? 'min' : 'day';
+  QP.buildSubControls(key);
+  el('tabs').querySelectorAll('button[data-t]').forEach(b =>
+    b.classList.toggle('active', b.dataset.t === (p === 'min' ? 'min' : 'day')));
+  const dom = el('chart');
+  const H = fitChartHeight(el('chartWrap'));   // 按容器实测可用高度自适应，避免出现上下滚动条
+  dom.style.height = H + 'px';
+  st._fitH = H;
+  const subs = st.subSel[st.chartType].slice(0, st.subCount);
+  const styleCfg = { candle: chartCfg.candle, showGap: chartCfg.showGap,
+                     overlay: chartCfg.overlay || 'ma' };
+  const code = st.stock.ts_code;
+  const mySeq = ++st.seq;                       // 防止快速切换时旧请求回填
+
+  if (isMin || p === 'm30') {
+    let j;
+    try { j = await api(`/api/minute/${code}`); }
+    catch (e) {
+      if (mySeq !== st.seq) return;
+      const i2 = echarts.getInstanceByDom(dom);
+      if (i2) i2.clear();
+      setStatus('分时数据未采集，请先在「数据采集」页点击「采集当日分时」');
+      return;
+    }
+    if (mySeq !== st.seq) return;
+    const inst = getChart(dom);
+    if (isMin) {
+      inst.setOption(buildChartOption({ type: 'min', bars: j.bars, date: j.date,
+        height: H, subs, ...styleCfg }), true);
+      st.barN = 0;
+    } else {
+      const m30 = aggMinute(j.bars, 6);
+      inst.setOption(buildChartOption({ type: 'day', bars: m30,
+        height: H, subs, ...styleCfg }), true);
+      bindBarGap(inst, m30.length);
+      st.barN = m30.length;
+    }
+    inst.resize();
+  } else {
+    const j = await api(`/api/quote/${code}`);
+    if (mySeq !== st.seq) return;
+    let bars = j.quotes;
+    if (p === 'week') bars = aggBars(bars, 'week');
+    else if (p === 'month') bars = aggBars(bars, 'month');
+    else if (p === 'w5') bars = aggBars(bars, 'w5');
+    const inst = getChart(dom);
+    inst.setOption(buildChartOption({ type: 'day', bars, height: H, subs, ...styleCfg }), true);
+    inst.resize();
+    bindBarGap(inst, bars.length);
+    st.barN = bars.length;
+  }
+  st.inst = echarts.getInstanceByDom(dom);
+  placeSubCtl(el('subCtl'), H, subs.length);
+};
+
+/* ---- 窗口缩放时图表自适应 ---- */
+function scheduleFitChart() {
+  clearTimeout(window.__fitT);
+  window.__fitT = setTimeout(() => {
+    Object.entries(QP).forEach(([k, st]) => {
+      if (!st || !st.stock) return;
+      if (!st.root.offsetParent) return;      // 面板当前不可见(不在当前页)则跳过
+      const want = fitChartHeight(st.el('chartWrap'));
+      if (Math.abs(want - (st._fitH || 0)) > 2) QP.renderChart(k);
+    });
+  }, 160);
+}
+window.addEventListener('resize', () => {
+  Object.values(QP).forEach(st => {
+    if (st.inst) { st.inst.resize(); fixBarGap(st.inst, st.barN); }
+  });
+  /* 板块合成指数图高度固定 300px，只需跟随宽度变化；已脱离文档的实例跳过 */
+  if (typeof boardChartInst !== 'undefined' && boardChartInst
+      && document.contains(boardChartInst.getDom())) boardChartInst.resize();
+  scheduleFitChart();   // 视口高度变化后重算 K 线高度，保证始终贴合屏幕
+});
+
+/* ==================== 板块行情（需求#19, v1.5） ==================== */
+let allBoards = [];
+let boardChartInst = null;
+let curBoard = null;          // 当前选中板块代码
+let boardChartType = 'day';   // day | min
+let boardMinDates = [];       // 该板块有分时的交易日(倒序)
+let boardMinDate = null;      // 当前分时查看的交易日
+let lastBoardDetail = null;   // 上次详情响应（供 tab 切换复用，避免重复请求）
+let lastBoardMembers = [];
+const boardSort = { key: null, dir: 0, defaultKeys: ['pct_chg'] };   // 默认按涨跌幅降序(2026-10-19 Epic#8, 原流通市值)
+
+const fmtYi = v => (v === null || v === undefined) ? '-' : (v / 1e8 >= 10000 ? (v / 1e12).toFixed(2) + '万亿' : (v / 1e8).toFixed(0) + '亿');
+const fmtPct = v => (v === null || v === undefined) ? '-' :
+  `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v > 0 ? '+' : ''}${Number(v).toFixed(2)}%</span>`;
+
+async function loadBoards() {
+  try {
+    const j = await api('/api/boards');
+    allBoards = j.boards || [];
+    $('boardInfo').innerText = j.trade_date
+      ? `基准日 ${j.trade_date} ｜ ${j.count} 个新浪行业板块 ｜ 流通市值加权合成指数(基期=1000)`
+        + ` ｜ 人气榜覆盖 ${j.hot_covered ?? '-'}/${j.count}（同花顺热榜仅取前 100 只，未覆盖的板块人气列显示 —）`
+      : '暂无数据，请先在「数据采集」页执行板块基础采集';
+    filterBoards();
+  } catch (e) {
+    $('boardBody').innerHTML = `<tr><td colspan="5" style="color:var(--up)">加载失败: ${e.message}</td></tr>`;
+  }
+}
+function filterBoards() {
+  const kw = ($('boardKwInput').value || '').trim();
+  const rows = kw ? allBoards.filter(b => b.board_name.includes(kw)) : allBoards;
+  /* 未点表头(=默认)时按 defaultKeys 多键降序；点了表头则按其单键规则
+     （注意 sortRows 是 (list,key,dir) 三参数，别把 state 对象整个传进去） */
+  const sorted = boardSort.key
+    ? sortRows(rows, boardSort.key, boardSort.dir)
+    : defaultSortRows(rows, boardSort.defaultKeys);
+  renderBoards(sorted);
+}
+function renderBoards(rows) {
+  if (!rows.length) {
+    $('boardBody').innerHTML = '<tr><td colspan="5" style="color:var(--dim)">无匹配板块</td></tr>';
+    return;
+  }
+  $('boardBody').innerHTML = rows.map(b => `
+    <tr class="pickrow" onclick="pickBoard('${b.board_code}')">
+      <td><span class="ell">${b.board_name}</span>${curBoard === b.board_code ? ' <span class="badge">当前</span>' : ''}</td>
+      <td class="r">${fmtPct(b.pct_chg)}</td>
+      <td class="r num">${b.member_cnt ?? '-'}</td>
+      <td class="r num">${fmtYi(b.circ_mv)}</td>
+      <td class="r num">${b.hot_rank ?? '-'}</td>
+    </tr>`).join('');
+}
+async function pickBoard(code) {
+  if (code !== curBoard) { boardMinDates = []; boardMinDate = null; }
+  curBoard = code;
+  /* 地址栏同步为 #/board/<code>（replaceState 不触发 hashchange，避免重复加载），便于分享定位 */
+  try { history.replaceState(null, '', '#/board/' + code); } catch (e) {}
+  filterBoards();
+  try {
+    const [d, m] = await Promise.all([
+      api(`/api/boards/${code}`), api(`/api/boards/${code}/members`)]);
+    renderBoardDetail(d, m.members || []);
+    loadBoardChart();
+  } catch (e) {
+    $('boardDetailBody').innerHTML = `<div style="color:var(--up);padding:20px">加载失败: ${e.message}</div>`;
+  }
+}
+function renderBoardDetail(d, members) {
+  lastBoardDetail = d; lastBoardMembers = members;   // 供 tab 切换复用
+  $('boardDetailTip').innerText = `${d.board_name} ｜ 基准日 ${d.trade_date}`;
+  const chgCls = d.pct_chg > 0 ? 'up' : d.pct_chg < 0 ? 'down' : '';
+  const band = `
+  <div class="quote-band">
+    <div class="qb-main">
+      <div class="qb-name">${d.board_name} <span class="code">${d.board_code}</span></div>
+      <div class="qb-price ${chgCls}">${fmt(d.pct_chg, 2)}%</div>
+      <div class="qb-chg" style="color:var(--dim)">板块涨跌幅(新浪快照)</div>
+    </div>
+    <div class="qb-cell"><span class="k">成分股</span><span class="v num">${d.member_cnt ?? '-'} 只</span></div>
+    <div class="qb-cell"><span class="k">总市值</span><span class="v num">${fmtYi(d.total_mv)}</span></div>
+    <div class="qb-cell"><span class="k">流通市值</span><span class="v num">${fmtYi(d.circ_mv)}</span></div>
+    <div class="qb-cell"><span class="k">人气排名<span class="badge" title="同花顺热榜只取前 100 只，仅对「有成分股在榜」的板块产生名次，名次在这些板块内部排序">热榜口径</span></span><span class="v num">${d.hot_rank ?? '-'}</span></div>
+    <div class="qb-cell"><span class="k">上涨/下跌</span><span class="v num"><span class="up">${d.up_cnt ?? '-'}</span> / <span class="down">${d.down_cnt ?? '-'}</span></span></div>
+    <div class="qb-cell"><span class="k">领涨股</span><span class="v">${d.lead_stock ?? '-'}</span></div>
+    <div class="qb-cell"><span class="k">创建日期<span class="badge" title="外源不公开板块创建日期，用成分股最早上市日作为代理口径">代理</span></span><span class="v num">${d.list_proxy_date ?? '-'}</span></div>
+  </div>
+  <div style="font-size:12px;color:#666;background:#fafbfc;border:1px solid var(--border);border-radius:3px;padding:8px 12px;margin-bottom:10px;line-height:1.7">
+    <b>板块解读</b>：${d.summary || '暂无'}
+  </div>
+  <div class="chart-tabs">
+    <button class="small ${boardChartType === 'day' ? 'active' : ''}" onclick="switchBoardChart('day')">日K(合成指数)</button>
+    <button class="small ${boardChartType === 'min' ? 'active' : ''}" onclick="switchBoardChart('min')">分时(近30交易日)</button>
+    <span id="boardMinDateWrap"></span>
+  </div>
+  <div id="boardChart" class="chart" style="height:300px"></div>
+  <div style="font-size:12px;color:var(--dim);margin:10px 0 6px">成分股 ${members.length} 只（<span class="stag tag-con">龙头</span>=流通市值/近20日涨幅/成交额综合TOP3，<span class="stag tag-ind">高相关</span>=与板块指数60日相关系数≥0.7或TOP20%）</div>
+  <div class="scroll-tbl" style="max-height:240px;overflow-y:auto">
+  <table>
+    <thead><tr><th>代码</th><th>名称</th><th>标签</th><th class="r">相关度</th>
+      <th class="r">流通市值</th><th class="r">近20日涨幅</th><th class="r">涨跌幅</th><th class="r">操作</th></tr></thead>
+    <tbody>${members.map(m => `
+      <tr>
+        <td class="code">${m.ts_code}</td><td>${m.name}</td>
+        <td>${m.leader_tag === 'leader' ? '<span class="stag tag-con">龙头</span>' : ''}${m.rel_tag === 'core' ? '<span class="stag tag-ind">高相关</span>' : ''}</td>
+        <td class="r num">${fmt(m.corr60, 2)}</td>
+        <td class="r num">${fmtYi(m.circ_mv)}</td>
+        <td class="r">${fmtPct(m.chg20)}</td>
+        <td class="r">${fmtPct(m.pct_chg)}</td>
+        <td class="r"><button class="mgoto" title="跳转选股结果页查看该股K线"
+          onclick="gotoStockKline('${m.ts_code}')">看K线 →</button></td>
+      </tr>`).join('')}</tbody>
+  </table>
+  </div>`;
+  $('boardDetailBody').innerHTML = band;
+}
+async function ensureBoardMinSelect() {
+  const wrap = $('boardMinDateWrap');
+  if (!wrap) return;
+  if (!boardMinDates.length) {
+    try { boardMinDates = (await api(`/api/boards/${curBoard}/minute_dates`)).dates || []; }
+    catch (e) { boardMinDates = []; }
+  }
+  if (!boardMinDate && boardMinDates.length) boardMinDate = boardMinDates[0];
+  wrap.innerHTML = boardMinDates.length
+    ? `<select class="small" style="margin-left:6px" onchange="boardMinDate=this.value;loadBoardChart()">${
+         boardMinDates.map(d => `<option value="${d}"${d === boardMinDate ? ' selected' : ''}>${d}</option>`).join('')
+       }</select>`
+    : '';
+}
+/* 切换日K / 分时：复用上次详情数据，不再重复请求 /api/boards/{code}(+members) */
+function switchBoardChart(t) {
+  if (boardChartType === t && boardChartInst) return;
+  boardChartType = t;
+  if (lastBoardDetail) renderBoardDetail(lastBoardDetail, lastBoardMembers);
+  loadBoardChart();
+}
+async function loadBoardChart() {
+  if (!curBoard) return;
+  const el = $('boardChart');
+  if (!el) return;
+  /* 用 getChart(el)(= getInstanceByDom || init) 取实例：renderBoardDetail 每次都用
+     innerHTML 重建整个详情面板，#boardChart 会被替换成新节点；若沿用缓存的旧实例，
+     setOption 会画到已脱离文档的旧节点上，表现为「第二次点板块后图表区整片空白」
+     （2026-09-16 修）。 */
+  boardChartInst = getChart(el);
+  boardChartInst.clear();
+  boardChartInst.showLoading({ text: '加载中...' });
+  try {
+    if (boardChartType === 'day') {
+      const j = await api(`/api/boards/${curBoard}/daily?days=1200`);
+      const dates = j.quotes.map(q => q.trade_date);
+      const kdata = j.quotes.map(q => [q.open, q.close, q.low, q.high]);
+      const ma5 = j.quotes.map(q => q.ma5), ma10 = j.quotes.map(q => q.ma10), ma20 = j.quotes.map(q => q.ma20);
+      const nBar = dates.length;
+      const zoomStart = nBar > 180 ? Math.max(0, (1 - 180 / nBar) * 100) : 0;
+      boardChartInst.setOption({
+        animation: false,
+        tooltip: { trigger: 'axis', confine: true, axisPointer: { type: 'cross' } },
+        title: { text: `共 ${nBar} 个交易日（可拖动下方滑块回溯）`, left: 6, top: 0,
+                 textStyle: { fontSize: 11, color: '#999', fontWeight: 'normal' } },
+        legend: { data: ['板块指数', 'MA5', 'MA10', 'MA20'], top: 0, right: 6, textStyle: { fontSize: 11 } },
+        grid: { left: 60, right: 16, top: 28, bottom: 24 },
+        xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10 } },
+        yAxis: { scale: true, axisLabel: { fontSize: 10 } },
+        dataZoom: [{ type: 'inside', start: zoomStart, end: 100 },
+                   { type: 'slider', height: 14, bottom: 4, start: zoomStart, end: 100 }],
+        series: [
+          { name: '板块指数', type: 'candlestick', data: kdata,
+            itemStyle: { color: '#f0423c', color0: '#1eb14e',
+                         borderColor: '#f0423c', borderColor0: '#1eb14e' } },
+          { name: 'MA5', type: 'line', data: ma5, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#f5a623' } },
+          { name: 'MA10', type: 'line', data: ma10, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#2980b9' } },
+          { name: 'MA20', type: 'line', data: ma20, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#9b59b6' } },
+        ],
+      }, true);
+    } else {
+      await ensureBoardMinSelect();
+      const j = await api(`/api/boards/${curBoard}/minutes${boardMinDate ? '?date=' + boardMinDate : ''}`);
+      const times = j.bars.map(b => (b.bar_time || '').slice(11, 16));
+      const closes = j.bars.map(b => b.close);
+      boardChartInst.setOption({
+        animation: false,
+        tooltip: { trigger: 'axis', confine: true },
+        grid: { left: 60, right: 16, top: 28, bottom: 24 },
+        xAxis: { type: 'category', data: times, axisLabel: { fontSize: 10 } },
+        yAxis: { scale: true, axisLabel: { fontSize: 10 } },
+        series: [{ name: `分时 ${j.date}`, type: 'line', data: closes, showSymbol: false,
+                   lineStyle: { width: 1.2, color: '#2980b9' }, areaStyle: { opacity: 0.06 } }],
+      }, true);
+    }
+  } catch (e) {
+    boardChartInst.hideLoading();
+    el.innerHTML = `<div style="color:var(--dim);padding:60px 0;text-align:center">${e.message}</div>`;
+    boardChartInst.dispose(); boardChartInst = null;
+    return;
+  }
+  boardChartInst.hideLoading();
+}
+
+/* ==================== 暗盘信号（需求#20, v1.5；2026-10-19 Epic#9: 50:50分栏+排序+K线联动） ==================== */
+let allDarkRows = [];
+let darkFiltered = [];
+const darkSort = { key: null, dir: 0, defaultKeys: ['pct_chg'] };   // 默认按涨跌幅降序
+const SIG_STYLE = {
+  '机构吸筹': 'background:#fff1f0;color:#e8342e',
+  '减持出货': 'background:#eafaf1;color:#1eb14e',
+  '游资活跃': 'background:#fff7e6;color:#d48806',
+  '无': 'background:#f0f1f3;color:#999',
+};
+const fmtWan = v => (v === null || v === undefined) ? '-' :
+  Math.abs(v) >= 1e8 ? (v / 1e8).toFixed(2) + '亿' : (v / 1e4).toFixed(0) + '万';
+
+let darkDatesReady = false;
+async function ensureDarkDates() {
+  const sel = $('darkDateSel');
+  if (darkDatesReady || sel.options.length > 1) return;
+  try {
+    const j = await api('/api/darkpool/dates');
+    (j.dates || []).forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.trade_date;
+      o.textContent = `${d.trade_date}（${d.count}只）`;
+      sel.appendChild(o);
+    });
+    darkDatesReady = true;
+  } catch (e) { /* 拿不到日期列表就退回默认最新日 */ }
+}
+async function loadDarkSignals() {
+  await ensureDarkDates();
+  const sig = $('darkSigSel').value;
+  const td = $('darkDateSel').value;
+  const qs = [];
+  if (td) qs.push(`trade_date=${encodeURIComponent(td)}`);
+  if (sig) qs.push(`signal=${encodeURIComponent(sig)}`);
+  try {
+    const j = await api('/api/darkpool/signals' + (qs.length ? `?${qs.join('&')}` : ''));
+    allDarkRows = j.results || [];
+    $('darkInfo').innerText = j.trade_date
+      ? `基准日 ${j.trade_date} ｜ ${j.count} 只有暗盘数据（大宗交易/龙虎榜盘后披露）｜ dark_score = 0.35×折溢价z + 0.25×龙虎榜净买/流通市值z + 0.20×机构席位净买z + 0.20×大宗占比z` : '暂无数据，请先在「数据采集」页执行暗盘采集';
+    filterDarkRows();
+  } catch (e) {
+    $('darkBody').innerHTML = `<tr><td colspan="14" style="color:var(--up)">加载失败: ${e.message}</td></tr>`;
+  }
+}
+function filterDarkRows() {
+  const kw = ($('darkKwInput').value || '').trim();
+  darkFiltered = kw ? allDarkRows.filter(r => r.ts_code.includes(kw.toUpperCase())
+    || (r.name || '').includes(kw)) : allDarkRows.slice();
+  renderDarkRows();
+}
+function renderDarkRows() {
+  /* 未点表头(=默认)时按 涨跌幅↓；点了表头则按其单键规则(三态: 升→降→原序) */
+  const rows = darkSort.key
+    ? sortRows(darkFiltered, darkSort.key, darkSort.dir)
+    : defaultSortRows(darkFiltered, darkSort.defaultKeys);
+  if (!rows.length) {
+    $('darkBody').innerHTML = '<tr><td colspan="14" style="color:var(--dim)">无匹配数据</td></tr>';
+    return;
+  }
+  $('darkBody').innerHTML = rows.map(r => `
+    <tr class="pickrow" onclick="QP.pick('dark','${r.ts_code}')">
+      <td class="code">${r.ts_code}</td><td>${r.name || '-'}</td>
+      <td><span class="stag" style="${SIG_STYLE[r.signal_tag] || SIG_STYLE['无']}">${r.signal_tag || '无'}</span></td>
+      <td class="r num"><b>${fmt(r.dark_score, 2)}</b></td>
+      <td class="r num">${fmtWan(r.block_amt)}</td>
+      <td class="r">${fmtPct(r.block_discount)}</td>
+      <td class="r num">${r.block_days5 ?? '-'}</td>
+      <td class="r num">${fmtWan(r.bb_net_amt5)}</td>
+      <td class="r num">${fmt(r.close, 2)}</td>
+      <td class="r">${fmtPct(r.pct_chg)}</td>
+      <td style="white-space:normal">${r.strategies ? tagList(r.strategies.replace(/、/g, ','), 'tag-idx', 3) : '-'}</td>
+      <td class="dt">${r.trade_date ? String(r.trade_date).slice(5) : '-'}</td>
+      <td class="r num ${r.cont_days > 0 ? 'up' : r.cont_days < 0 ? 'down' : ''}">${r.cont_days == null ? '-' : (r.cont_days > 0 ? '+' + r.cont_days : r.cont_days)}</td>
+      <td class="r num ${r.cont_pct > 0 ? 'up' : r.cont_pct < 0 ? 'down' : ''}">${r.cont_pct == null ? '-' : (r.cont_pct > 0 ? '+' : '') + fmt(r.cont_pct) + '%'}</td>
+    </tr>`).join('');
+}
+/* ---- 跨页跳转（hash 路由，带参数可分享/复现） ----
+   #/board/<board_code>  板块行情页并自动定位该板块详情
+   #/result/<ts_code>    选股结果页并加载该股K线 */
+function applyHashRoute() {
+  const h = location.hash || '';
+  let m = h.match(/^#\/board\/([A-Za-z0-9_]+)/);
+  if (m) {
+    const code = m[1];
+    gotoPage('board');
+    (allBoards.length ? Promise.resolve() : loadBoards())
+      .then(() => { if (code !== curBoard) pickBoard(code); });
+    return true;
+  }
+  m = h.match(/^#\/result\/([A-Za-z0-9.]+)/i);
+  if (m) {
+    const code = m[1].toUpperCase();
+    gotoPage('result');
+    setTimeout(() => QP.pick('result', code), 120);
+    return true;
+  }
+  return false;
+}
+window.addEventListener('hashchange', applyHashRoute);
+function gotoBoard(code) {
+  const t = '#/board/' + code;
+  if (location.hash === t) applyHashRoute(); else location.hash = t;
+}
+function gotoStockKline(code) {
+  const t = '#/result/' + code;
+  if (location.hash === t) applyHashRoute(); else location.hash = t;
+}
+function gotoStockFromDark(code) { gotoStockKline(code); }
+
+/* ---- 板块/暗盘采集按钮 ---- */
+async function collectBoard() {
+  log('正在采集板块基础数据（新浪行业快照+成分映射+人气, 约1分钟）...');
+  try {
+    const j = await api('/api/collect/board', 'POST');
+    log(`✅ 板块基础采集完成: ${j.boards} 个板块, ${j.members} 条成分映射, 基准日 ${j.trade_date}`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectBoardSynth() {
+  log('正在合成板块日线（流通市值加权全量覆盖, 约40秒）...');
+  try {
+    const j = await api('/api/collect/boardsynth', 'POST');
+    log(`✅ 板块日线合成完成: ${j.boards} 个板块, ${j.rows} 行`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectBoardMin() {
+  log('正在合成板块分时（最新交易日）...');
+  try {
+    const j = await api('/api/collect/boardmin', 'POST');
+    log(`✅ 板块分时合成完成: ${j.rows} 行, 交易日 ${j.trade_date}`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectDarkpool() {
+  log('正在采集暗盘数据（大宗交易+龙虎榜+席位, 报表接口低频约1-2分钟）...');
+  try {
+    const j = await api('/api/collect/darkpool?days=7', 'POST');
+    log(`✅ 暗盘采集完成: 大宗 ${j.block_trade.rows} 行, 龙虎榜 ${j.billboard.rows} 行, 席位 ${j.billboard.seat_pairs} 组`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+async function collectDarkInd() {
+  log('正在重算暗盘派生指标...');
+  try {
+    const j = await api('/api/collect/darkind', 'POST');
+    log(`✅ 暗盘指标重算完成: ${j.dates} 个交易日, ${j.rows} 行, 信号分布 ${JSON.stringify(j.signals)}`, 'okm');
+  } catch (e) { log('❌ ' + e.message, 'err'); }
+}
+
+/* ==================== 双引擎图表适配器（v1.6） ====================
+   模型层引擎无关：{ type:'bar', title, x:[], series:[{name, data, color}] }
+   渲染器各自把 model 翻译成 ECharts option / Plotly data+layout。
+   切换引擎时必须 dispose/purge 对方实例，防止画到废节点（双引擎下该坑翻倍）。 */
+const EChartsRenderer = {
+  bar(dom, model) {
+    const inst = getChart(dom);
+    inst.setOption({
+      title: model.title ? { text: model.title, textStyle: { fontSize: 12 } } : undefined,
+      grid: { left: 44, right: 16, top: 20, bottom: 40 },
+      tooltip: { trigger: 'axis', confine: true },
+      xAxis: { type: 'category', data: model.x, axisLabel: { fontSize: 11 } },
+      yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: '#f0f1f3' } } },
+      series: model.series.map(s => ({
+        name: s.name, type: 'bar', data: s.data, barMaxWidth: 36,
+        itemStyle: { color: s.color || '#f0423c', borderRadius: [2, 2, 0, 0] },
+        label: { show: true, position: 'top', fontSize: 10, color: '#666' },
+      })),
+    }, true);
+  },
+};
+const PlotlyRenderer = {
+  bar(dom, model) {
+    Plotly.react(dom, model.series.map(s => ({
+      type: 'bar', name: s.name, x: model.x, y: s.data,
+      marker: { color: s.color || '#f0423c' },
+      text: s.data, textposition: 'outside', textfont: { size: 10, color: '#666' },
+    })), {
+      title: model.title ? { text: model.title, font: { size: 12 } } : undefined,
+      margin: { l: 44, r: 16, t: 24, b: 44 },
+      xaxis: { tickfont: { size: 11 } },
+      yaxis: { gridcolor: '#f0f1f3' },   /* 刻度交给 Plotly 自适应, 勿设 dtick:1(大值域会挤满) */
+      showlegend: false, plot_bgcolor: '#fff', paper_bgcolor: '#fff',
+    }, { displayModeBar: false, responsive: true });
+  },
+};
+const ChartAdapter = {
+  engine: localStorage.getItem('chartEngine') || 'echarts',
+  _plotlyReady: null,
+  /* Plotly(1MB) 懒加载：首次切到 plotly 时才注入本地 lib 脚本，不拖累默认路径 */
+  ensurePlotly() {
+    if (window.Plotly) return Promise.resolve();
+    if (!this._plotlyReady) {
+      this._plotlyReady = new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = '/static/lib/plotly-basic.min.js';
+        s.onload = res;
+        s.onerror = () => { this._plotlyReady = null; rej(new Error('Plotly 库加载失败')); };
+        document.head.appendChild(s);
+      });
+    }
+    return this._plotlyReady;
+  },
+  async render(dom, model) {
+    if (this.engine === 'plotly') {
+      await this.ensurePlotly();
+      const inst = echarts.getInstanceByDom(dom);   // 清掉 echarts 实例防残留
+      if (inst) inst.dispose();
+      PlotlyRenderer[model.type](dom, model);
+    } else {
+      if (window.Plotly) Plotly.purge(dom);          // 清掉 plotly 实例防残留
+      EChartsRenderer[model.type](dom, model);
+    }
+  },
+};
+function switchChartEngine(v) {
+  ChartAdapter.engine = v;
+  localStorage.setItem('chartEngine', v);
+  const sel = $('ztEngine');
+  if (sel) sel.value = v;   // 程序化切换时同步筛选器显示
+  renderZtCharts();   // 当前面板立即用新引擎重渲
+}
+
+/* ==================== 涨停池页面（v1.6） ==================== */
+let ztDatesReady = false;
+let allZtRows = [];
+let ztLadderModel = null, ztIndustryModel = null, ztSwIndustryModel = null;
+
+async function ensureZtDates() {
+  const sel = $('ztDateSel');
+  if (ztDatesReady || sel.options.length > 1) return;
+  try {
+    const j = await api('/api/ztpool/dates');
+    (j.dates || []).forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.trade_date;
+      o.textContent = `${d.trade_date}（${d.count}只涨停）`;
+      sel.appendChild(o);
+    });
+    ztDatesReady = true;
+  } catch (e) { /* 拿不到日期列表就退回默认最新日 */ }
+}
+
+async function loadZtPool() {
+  await ensureZtDates();
+  $('ztEngine').value = ChartAdapter.engine;
+  const td = $('ztDateSel').value;
+  const mb = $('ztMinBoards').value;
+  const qs = mb === 'first' ? ['exact_boards=1'] : [`min_boards=${mb}`];
+  if (td) qs.push(`trade_date=${encodeURIComponent(td)}`);
+  try {
+    const j = await api('/api/ztpool/pool?' + qs.join('&'));
+    allZtRows = j.stocks || [];
+    $('ztInfo').innerText = j.trade_date
+      ? `基准日 ${j.trade_date} ｜ 涨停 ${allZtRows.length} 只（已按筛选）｜ 强势股池 ${j.strong_count} 只 ｜ 数据源：东财涨停池/强势股池`
+      : '暂无数据，请先执行 run_collect.py --ztpool 采集';
+    ztLadderModel = {
+      type: 'bar',
+      x: (j.ladder || []).map(l => l.cont_boards >= 2 ? `${l.cont_boards}连板` : '首板'),
+      series: [{ name: '家数', data: (j.ladder || []).map(l => l.count), color: '#f0423c' }],
+    };
+    ztIndustryModel = {
+      type: 'bar',
+      x: (j.industry || []).map(i => i.industry),
+      series: [{ name: '家数', data: (j.industry || []).map(i => i.count), color: '#e8342e' }],
+    };
+    ztSwIndustryModel = {
+      type: 'bar',
+      x: (j.sw_industry || []).map(i => i.industry),
+      series: [{ name: '家数', data: (j.sw_industry || []).map(i => i.count), color: '#2980b9' }],
+    };
+    renderZtCharts();
+    filterZtRows();
+  } catch (e) {
+    $('ztBody').innerHTML = `<tr><td colspan="10" style="color:var(--up)">加载失败: ${e.message}</td></tr>`;
+  }
+}
+
+function renderZtCharts() {
+  if (!ztLadderModel) return;
+  ChartAdapter.render($('ztLadderChart'), ztLadderModel);
+  /* 行业分布: 东财/申万口径切换(申万=stock_sw_industry_member 一级行业) */
+  const src = ($('ztIndSrc') || {}).value || 'em';
+  ChartAdapter.render($('ztIndustryChart'),
+    src === 'sw' && ztSwIndustryModel ? ztSwIndustryModel : ztIndustryModel);
+}
+
+function filterZtRows() {
+  const kw = ($('ztKwInput').value || '').trim();
+  const rows = kw ? allZtRows.filter(r => r.ts_code.includes(kw.toUpperCase())
+    || (r.name || '').includes(kw) || (r.industry || '').includes(kw)) : allZtRows;
+  if (!rows.length) {
+    $('ztBody').innerHTML = '<tr><td colspan="10" style="color:var(--dim)">无匹配数据</td></tr>';
+    return;
+  }
+  $('ztBody').innerHTML = rows.map(r => `
+    <tr class="pickrow" onclick="QP.pick('zt','${r.ts_code}')">
+      <td class="code">${r.ts_code}</td><td>${r.name || '-'}</td>
+      <td class="r num"><b style="color:${r.cont_boards >= 3 ? 'var(--up)' : 'inherit'}">${r.cont_boards >= 2 ? r.cont_boards + '板' : '首板'}</b></td>
+      <td>${r.zt_stat || '-'}</td>
+      <td class="num">${r.first_lock_time || '-'}</td>
+      <td class="r num">${r.break_cnt ?? '-'}</td>
+      <td class="r num">${fmtWan(r.lock_amt)}</td>
+      <td class="r num">${fmt(r.turnover_rate, 2)}</td>
+      <td>${r.industry || '-'}</td>
+      <td class="r">${fmtPct(r.pct_chg)}</td>
+    </tr>`).join('');
+}
+
+/* ---- 初始化 ---- */
+initQuotePanel('result', 'qpBody-result');
+initQuotePanel('dark', 'qpBody-dark');
+initQuotePanel('zt', 'qpBody-zt');
+initQuotePanel('market', 'qpBody-market');
+/* 面板尺寸变化(视口缩放 / 布局变化)后自动重算 K 线高度：比 window.resize 更可靠，
+   能覆盖 CDP 改视口、跨屏拖动、切换页面等场景 —— 保证 K 线始终贴合屏幕不溢出 */
+if (window.ResizeObserver) {
+  const __ro = new ResizeObserver(() => scheduleFitChart());
+  ['result', 'dark', 'zt', 'market'].forEach(k => { const st = QP[k]; if (st) __ro.observe(st.root); });
+}
+initSortable('resultTable', resultSort, () => { curPage = 1; renderResults(lastFiltered); });
+initSortable('darkTable', darkSort, renderDarkRows);
+initSortable('boardTable', boardSort, filterBoards);
+loadIndexTags();
+checkHealth();
+loadStrategies();
+loadBatches();
+loadBoards();
+loadDarkSignals();
+applyHashRoute();   // 支持带参数直达(如 #/board/new_jrhy、#/result/605080.SH)
+</script>
+</body>
+</html>

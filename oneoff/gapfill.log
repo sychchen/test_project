@@ -1,0 +1,19 @@
+[gapfill] amount 缺口: ['2026-09-18', '2026-09-21'] | valuation 缺口: ['2026-09-17', '2026-09-18', '2026-09-21']
+[gapfill] baostock 区间 2026-09-17 ~ 2026-09-21
+[gapfill] 股票 5210, 已处理 0, 待处理 5210
+login success!
+[gapfill] progress 500/5210 ok=500 amt=1000 val=1500 failed=0 elapsed=172s
+[gapfill] progress 1000/5210 ok=1000 amt=2000 val=3000 failed=0 elapsed=323s
+[gapfill] progress 1500/5210 ok=1500 amt=3000 val=4500 failed=0 elapsed=472s
+[gapfill] progress 2000/5210 ok=2000 amt=3999 val=5999 failed=0 elapsed=623s
+[gapfill] progress 2500/5210 ok=2500 amt=4998 val=7498 failed=0 elapsed=765s
+[gapfill] progress 3000/5210 ok=3000 amt=5998 val=8998 failed=0 elapsed=904s
+[gapfill] progress 3500/5210 ok=3500 amt=6997 val=10496 failed=0 elapsed=1036s
+[gapfill] progress 4000/5210 ok=4000 amt=7996 val=11994 failed=0 elapsed=1183s
+[gapfill] progress 4500/5210 ok=4500 amt=8996 val=13494 failed=0 elapsed=1343s
+[gapfill] progress 5000/5210 ok=5000 amt=9996 val=14994 failed=0 elapsed=1492s
+logout success!
+[gapfill] 本分片: ok=5210 amount+10416行 valuation+15624行 failed=0 用时=1568s
+[gapfill] valpctl 2026-09-17: {'trade_date': '2026-09-17', 'rows': 5208, 'elapsed': 84}
+[gapfill] valpctl 2026-09-18: {'trade_date': '2026-09-18', 'rows': 5208, 'elapsed': 77}
+[gapfill] valpctl 2026-09-21: {'trade_date': '2026-09-21', 'rows': 5208, 'elapsed': 79}

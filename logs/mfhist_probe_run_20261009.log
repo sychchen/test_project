@@ -1,0 +1,13 @@
+probe0: RemoteDisconnected
+probe1: RemoteDisconnected
+probe2: RemoteDisconnected
+probe3: RemoteDisconnected
+probe4: RemoteDisconnected
+probe5: RemoteDisconnected
+probe6: RemoteDisconnected
+probe7: RemoteDisconnected
+probe8: RemoteDisconnected
+probe9: RemoteDisconnected
+probe10: RemoteDisconnected
+probe11: RemoteDisconnected
+5 分钟内无放行窗口, 放弃本轮

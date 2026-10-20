@@ -1,0 +1,1 @@
+"{\"bars\":1041,\"tipTop\":389,\"rootTop\":389,\"tipRight\":1037,\"rootRight\":1118,\"insideTop\":true,\"insideRight\":true}"
